@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 const BasketballSVG = ({ size = 40, className = "" }) => (
   <svg viewBox="0 0 100 100" width={size} height={size} className={className}>
@@ -714,14 +714,6 @@ export default function LandingPage() {
             className="px-10 py-4 bg-gradient-to-r from-gold to-rust text-stadium font-mono text-lg uppercase tracking-wider rounded-lg"
           >
             {hasSavedGame ? 'Continue Career' : 'New Game'}
-          </motion.button>
-          
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.98 }}
-            className="px-10 py-4 border-2 border-gold/50 text-gold font-mono text-lg uppercase tracking-wider rounded-lg hover:bg-gold/10 transition-colors"
-          >
-            <Link to="/how-to-play">How to Play</Link>
           </motion.button>
         </motion.div>
 
