@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useGame } from '../context/GameContext'
 import { useCountUp } from '../hooks/useCountUp'
@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase'
 const HARD_CAP = 141000000
 
 const navItems = [
-  { path: '/', label: 'Dashboard' },
+  { path: '/dashboard', label: 'Dashboard' },
   { path: '/roster', label: 'Roster' },
   { path: '/dev-league', label: 'Dev League' },
   { path: '/game-day', label: 'Game Day' },
@@ -56,9 +56,11 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 h-screen w-[220px] bg-ink flex flex-col z-40">
       <div className="p-6">
-        <h1 className="font-display text-cream text-lg uppercase tracking-wide">
-          {activeTeam ? `${activeTeam.city} ${activeTeam.name}` : 'Your Team'}
-        </h1>
+        <Link to="/" className="block">
+          <h1 className="font-display text-cream text-lg uppercase tracking-wide hover:text-gold transition-colors">
+            {activeTeam ? `${activeTeam.city} ${activeTeam.name}` : 'Your Team'}
+          </h1>
+        </Link>
         <div className="h-px bg-rust mt-4" />
       </div>
 

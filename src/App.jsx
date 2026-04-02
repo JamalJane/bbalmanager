@@ -16,6 +16,7 @@ import HallOfFame from './pages/HallOfFame'
 import SeasonRecap from './pages/SeasonRecap'
 import NewGame from './pages/NewGame'
 import DatabaseSetup from './pages/DatabaseSetup'
+import LandingPage from './pages/LandingPage'
 import { GameProvider } from './context/GameContext'
 import { CinematicProvider } from './context/CinematicContext'
 import CinematicOverlay from './components/CinematicOverlay'
@@ -53,7 +54,7 @@ class ErrorBoundary extends Component {
 }
 
 const appRoutes = [
-  { path: '/', element: <Dashboard /> },
+  { path: '/dashboard', element: <Dashboard /> },
   { path: '/roster', element: <Roster /> },
   { path: '/draft-board', element: <DraftBoard /> },
   { path: '/game-day', element: <GameDay /> },
@@ -72,6 +73,7 @@ export default function App() {
   const [isReady, setIsReady] = useState(false)
   const location = useLocation()
   const isNewGame = location.pathname === '/new-game'
+  const isLandingPage = location.pathname === '/'
 
   useEffect(() => {
     setIsReady(true)
@@ -91,15 +93,17 @@ export default function App() {
     )
   }
 
-  const showLayout = hasSavedGame && !isNewGame
+  const showLayout = hasSavedGame && !isNewGame && !isLandingPage
+  const showLanding = !hasSavedGame || isLandingPage
 
   const content = (
     <Routes location={location} key={location.pathname}>
-      {!hasSavedGame ? (
+      {showLanding ? (
         <>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/new-game" element={<NewGame />} />
           <Route path="/database-setup" element={<DatabaseSetup />} />
-          <Route path="*" element={<Navigate to="/new-game" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </>
       ) : (
         <>
