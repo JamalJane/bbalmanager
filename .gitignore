@@ -18,7 +18,10 @@ out/
 .env.development
 .env.production
 .env.test
+.env.example
 *.env
+.env.production
+.env.staging
 secrets.json
 credentials.json
 *.pem
@@ -64,7 +67,13 @@ yarn-error.log*
 # OS
 Thumbs.db
 ehthumbs.db
-.DS_Store
+
+# Project-specific (large/auto-generated)
+sql/
+files/
+flowcharts_hardwood_manager/
+dogfood-output/
+*.har
 
 # Misc
 *.bak
