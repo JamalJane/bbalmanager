@@ -1,46 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'framer-motion'
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-
-const FloatingBall = ({ delay, x, y, size, duration }) => (
-  <motion.div
-    className="absolute pointer-events-none"
-    style={{
-      left: `${x}%`,
-      top: `${y}%`,
-      width: size,
-      height: size,
-    }}
-    initial={{ opacity: 0, scale: 0, rotate: 0 }}
-    animate={{ 
-      opacity: [0, 0.6, 0.4, 0.6, 0],
-      scale: [0, 1, 0.8, 1.2, 0],
-      rotate: [0, 180, 360],
-      y: [0, -100, -200, -100, 0]
-    }}
-    transition={{
-      duration,
-      delay,
-      repeat: Infinity,
-      ease: "easeInOut"
-    }}
-  >
-    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-glow">
-      <defs>
-        <radialGradient id="ballGrad" cx="30%" cy="30%">
-          <stop offset="0%" stopColor="#FF8C42" />
-          <stop offset="100%" stopColor="#B85C2A" />
-        </radialGradient>
-      </defs>
-      <circle cx="50" cy="50" r="48" fill="url(#ballGrad)" />
-      <path d="M50 2 Q50 50 50 98" stroke="#1A1A18" strokeWidth="2" fill="none" />
-      <path d="M2 50 Q50 50 98 50" stroke="#1A1A18" strokeWidth="2" fill="none" />
-      <path d="M15 20 Q50 35 85 20" stroke="#1A1A18" strokeWidth="2" fill="none" />
-      <path d="M15 80 Q50 65 85 80" stroke="#1A1A18" strokeWidth="2" fill="none" />
-    </svg>
-  </motion.div>
-)
 
 const BasketballSVG = ({ size = 40, className = "" }) => (
   <svg viewBox="0 0 100 100" width={size} height={size} className={className}>
@@ -69,176 +29,125 @@ const BasketballSVG = ({ size = 40, className = "" }) => (
 const Court3D = () => {
   return (
     <div className="court-wrapper">
-      {/* Court reflections */}
-      <div className="court-reflection" />
-      
       {/* Main 3D Court */}
-      <motion.div 
-        className="court-container"
-        initial={{ rotateX: 90, opacity: 0 }}
-        animate={{ rotateX: 65, opacity: 1 }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-      >
+      <div className="court-container">
         <div className="court">
-          {/* Court Floor Pattern */}
+          {/* Court Floor */}
           <div className="court-floor" />
           
-          {/* Court Lines */}
-          <div className="court-line half-court" />
-          <div className="court-line center-circle" />
-          <div className="court-line center-dot" />
-          <div className="court-line three-point-left" />
-          <div className="court-line three-point-right" />
-          <div className="court-line key-left" />
-          <div className="court-line key-right" />
-          <div className="court-line free-throw-left" />
-          <div className="court-line free-throw-right" />
+          {/* Court Lines - Top Half */}
+          <div className="three-point-top" />
+          <div className="key-top" />
+          <div className="free-throw-circle-top" />
+          <div className="backboard-top" />
           
-          {/* Corner Threes */}
-          <div className="court-line corner-three-left" />
-          <div className="court-line corner-three-right" />
+          {/* Court Lines - Bottom Half */}
+          <div className="three-point-bottom" />
+          <div className="key-bottom" />
+          <div className="free-throw-circle-bottom" />
+          <div className="backboard-bottom" />
           
-          {/* Left Hoop Assembly */}
-          <div className="hoop-assembly left">
-            {/* Backboard */}
+          {/* Center Circle */}
+          <div className="center-circle" />
+          <div className="center-dot" />
+          
+          {/* Half Court Line */}
+          <div className="half-court-line" />
+          
+          {/* Top Hoop */}
+          <div className="hoop-top">
             <motion.div 
-              className="backboard"
-              animate={{ scaleX: [1, 1.02, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
+              className="hoop-ring-top"
+              animate={{ 
+                boxShadow: [
+                  '0 0 15px rgba(232, 89, 60, 0.6), 0 0 30px rgba(232, 89, 60, 0.3)',
+                  '0 0 30px rgba(232, 89, 60, 0.9), 0 0 50px rgba(232, 89, 60, 0.5)',
+                  '0 0 15px rgba(232, 89, 60, 0.6), 0 0 30px rgba(232, 89, 60, 0.3)'
+                ]
+              }}
+              transition={{ duration: 1.5, repeat: Infinity }}
             />
-            {/* Pole */}
-            <div className="hoop-pole" />
-            {/* Hoop */}
-            <div className="hoop-bracket">
-              <motion.div 
-                className="hoop-ring"
-                animate={{ 
-                  boxShadow: [
-                    '0 0 20px rgba(232, 89, 60, 0.5), 0 0 40px rgba(232, 89, 60, 0.3)',
-                    '0 0 40px rgba(232, 89, 60, 0.8), 0 0 60px rgba(232, 89, 60, 0.5)',
-                    '0 0 20px rgba(232, 89, 60, 0.5), 0 0 40px rgba(232, 89, 60, 0.3)'
-                  ]
-                }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              />
-              <div className="hoop-net" />
-            </div>
+            <div className="hoop-net-top" />
           </div>
           
-          {/* Right Hoop Assembly */}
-          <div className="hoop-assembly right">
+          {/* Bottom Hoop */}
+          <div className="hoop-bottom">
             <motion.div 
-              className="backboard"
-              animate={{ scaleX: [1, 1.02, 1] }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+              className="hoop-ring-bottom"
+              animate={{ 
+                boxShadow: [
+                  '0 0 15px rgba(232, 89, 60, 0.6), 0 0 30px rgba(232, 89, 60, 0.3)',
+                  '0 0 30px rgba(232, 89, 60, 0.9), 0 0 50px rgba(232, 89, 60, 0.5)',
+                  '0 0 15px rgba(232, 89, 60, 0.6), 0 0 30px rgba(232, 89, 60, 0.3)'
+                ]
+              }}
+              transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
             />
-            <div className="hoop-pole" />
-            <div className="hoop-bracket">
-              <motion.div 
-                className="hoop-ring"
-                animate={{ 
-                  boxShadow: [
-                    '0 0 20px rgba(232, 89, 60, 0.5), 0 0 40px rgba(232, 89, 60, 0.3)',
-                    '0 0 40px rgba(232, 89, 60, 0.8), 0 0 60px rgba(232, 89, 60, 0.5)',
-                    '0 0 20px rgba(232, 89, 60, 0.5), 0 0 40px rgba(232, 89, 60, 0.3)'
-                  ]
-                }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              />
-              <div className="hoop-net" />
-            </div>
+            <div className="hoop-net-bottom" />
           </div>
           
-          {/* Animated Basketball - Shot Trajectory */}
+          {/* Animated Basketball Shot */}
           <motion.div 
-            className="basketball-shot"
-            initial={{ x: 100, y: 200, rotate: 0, opacity: 1 }}
+            className="shot-ball"
+            initial={{ x: -50, y: 350, rotate: 0, opacity: 1 }}
             animate={{ 
-              x: [100, 250, 320],
-              y: [200, -50, 180],
+              x: [null, 180, 250],
+              y: [null, 100, 220],
               rotate: [0, 360, 720],
-              opacity: [1, 1, 1, 0]
             }}
             transition={{ 
-              duration: 2, 
-              times: [0, 0.4, 0.8, 1],
+              duration: 1.5, 
+              times: [0, 0.5, 1],
               repeat: Infinity,
               repeatDelay: 2
             }}
           >
-            <BasketballSVG size={25} />
+            <BasketballSVG size={30} />
           </motion.div>
           
-          {/* Ball Going Through Net */}
-          <motion.div 
-            className="ball-swish"
-            initial={{ x: 320, y: 180, opacity: 0 }}
-            animate={{ 
-              x: 320,
-              y: [180, 195, 220],
-              opacity: [0, 1, 1, 0]
-            }}
-            transition={{ 
-              duration: 0.8,
-              delay: 2,
-              repeat: Infinity,
-              repeatDelay: 2
-            }}
+          {/* Ball Swish Effect */}
+          <motion.div
+            className="swish-effect"
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: [0, 1, 1, 0], scale: [0, 1.2, 1] }}
+            transition={{ duration: 0.8, delay: 1.4, repeat: Infinity, repeatDelay: 2 }}
           >
-            <BasketballSVG size={20} />
+            SWISH!
           </motion.div>
           
           {/* Score Flash */}
-          <motion.div 
+          <motion.div
             className="score-flash"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: [0, 1, 1, 0], scale: [0.5, 1.2, 1] }}
-            transition={{ duration: 1, delay: 2.3, repeat: Infinity, repeatDelay: 2 }}
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: [0, 1, 1, 0], y: [-10, -20, -30] }}
+            transition={{ duration: 1, delay: 1.5, repeat: Infinity, repeatDelay: 2 }}
           >
             +2
           </motion.div>
           
-          {/* Player Silhouettes */}
-          <motion.div 
-            className="player-silhouette player-1"
-            animate={{ x: [50, 120, 80, 50] }}
-            transition={{ duration: 4, repeat: Infinity }}
-          />
-          <motion.div 
-            className="player-silhouette player-2"
-            animate={{ x: [550, 480, 520, 550] }}
-            transition={{ duration: 4, repeat: Infinity, delay: 0.5 }}
-          />
-          <motion.div 
-            className="player-silhouette player-3"
-            animate={{ y: [180, 150, 180] }}
-            transition={{ duration: 3, repeat: Infinity, delay: 1 }}
-          />
+          {/* Player silhouettes */}
+          <motion.div className="player player-offense" animate={{ x: [0, 20, 0] }} transition={{ duration: 4, repeat: Infinity }} />
+          <motion.div className="player player-defense" animate={{ x: [0, -15, 0] }} transition={{ duration: 3.5, repeat: Infinity }} />
+          <motion.div className="player player-wing" animate={{ y: [180, 160, 180] }} transition={{ duration: 2, repeat: Infinity }} />
           
-          {/* Spotlight Effects */}
-          <div className="spotlight left-spotlight" />
-          <div className="spotlight right-spotlight" />
-          
-          {/* Ambient Particles */}
-          {[...Array(15)].map((_, i) => (
+          {/* Ambient particles */}
+          {[...Array(12)].map((_, i) => (
             <motion.div
               key={i}
               className="court-particle"
               style={{
-                left: `${10 + Math.random() * 80}%`,
-                top: `${10 + Math.random() * 80}%`,
-                width: Math.random() * 3 + 1,
-                height: Math.random() * 3 + 1,
+                left: `${15 + (i * 7)}%`,
+                top: `${20 + (i % 4) * 20}%`,
               }}
               animate={{
-                opacity: [0, 0.8, 0],
-                y: [-20, -80, -150],
-                x: [0, Math.random() * 30 - 15, Math.random() * 30 - 15]
+                opacity: [0, 0.7, 0],
+                y: [0, -40, -80],
+                x: [0, 10, 0]
               }}
               transition={{
-                duration: 3 + Math.random() * 2,
+                duration: 2.5,
                 repeat: Infinity,
-                delay: Math.random() * 3
+                delay: i * 0.3
               }}
             />
           ))}
@@ -246,47 +155,41 @@ const Court3D = () => {
         
         {/* Court Shadow */}
         <div className="court-shadow" />
-      </motion.div>
+      </div>
       
       <style>{`
         .court-wrapper {
           position: relative;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 60px 0;
-        }
-        
-        .court-reflection {
-          position: absolute;
-          bottom: 20px;
-          width: 600px;
-          height: 150px;
-          background: linear-gradient(180deg, rgba(200, 150, 58, 0.2) 0%, transparent 100%);
-          filter: blur(20px);
-          transform: scaleY(-0.3);
-          opacity: 0.5;
+          width: 100%;
+          max-width: 700px;
+          margin: 0 auto;
+          perspective: 1000px;
         }
         
         .court-container {
-          perspective: 1500px;
-          perspective-origin: center 60%;
+          position: relative;
+          width: 100%;
           transform-style: preserve-3d;
+          animation: courtFloat 6s ease-in-out infinite;
+        }
+        
+        @keyframes courtFloat {
+          0%, 100% { transform: translateY(0) rotateX(55deg); }
+          50% { transform: translateY(-15px) rotateX(55deg); }
         }
         
         .court {
           position: relative;
-          width: 600px;
-          height: 280px;
-          transform: rotateX(65deg) rotateZ(-5deg);
-          transform-style: preserve-3d;
-          background: linear-gradient(180deg, #1A1A18 0%, #252523 50%, #1A1A18 100%);
+          width: 100%;
+          height: 400px;
+          background: linear-gradient(180deg, #2A2520 0%, #3A3530 30%, #2A2520 70%, #1A1510 100%);
           border: 4px solid #C8963A;
-          box-shadow: 
-            0 0 80px rgba(200, 150, 58, 0.4),
-            0 0 120px rgba(200, 150, 58, 0.2),
-            inset 0 0 150px rgba(0,0,0,0.7);
+          border-radius: 8px;
           overflow: hidden;
+          box-shadow: 
+            0 0 60px rgba(200, 150, 58, 0.4),
+            0 0 100px rgba(200, 150, 58, 0.2),
+            inset 0 0 80px rgba(0,0,0,0.5);
         }
         
         .court-floor {
@@ -296,255 +199,269 @@ const Court3D = () => {
             repeating-linear-gradient(
               90deg,
               transparent 0px,
-              transparent 29px,
-              rgba(200, 150, 58, 0.1) 29px,
-              rgba(200, 150, 58, 0.1) 30px
+              transparent 38px,
+              rgba(200, 150, 58, 0.08) 38px,
+              rgba(200, 150, 58, 0.08) 40px
             ),
-            linear-gradient(180deg, rgba(42, 42, 40, 0.5) 0%, rgba(26, 26, 24, 0.8) 100%);
+            linear-gradient(180deg, rgba(60, 55, 50, 0.3) 0%, rgba(40, 35, 30, 0.5) 100%);
         }
         
         .court-shadow {
           position: absolute;
-          bottom: -80px;
-          left: 50%;
-          transform: translateX(-50%) rotateX(90deg);
-          width: 700px;
-          height: 200px;
-          background: radial-gradient(ellipse at center, rgba(0,0,0,0.6) 0%, transparent 70%);
-          filter: blur(30px);
+          bottom: -60px;
+          left: 10%;
+          width: 80%;
+          height: 60px;
+          background: radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, transparent 70%);
+          filter: blur(20px);
+          transform: scaleY(-0.3);
         }
         
-        .court-line {
+        /* Top Court Lines */
+        .three-point-top {
           position: absolute;
-          border: 2px solid rgba(200, 150, 58, 0.6);
+          top: 0;
+          left: 5%;
+          width: 90%;
+          height: 120px;
+          border-bottom: 3px solid rgba(200, 150, 58, 0.7);
+          border-radius: 0 0 50% 50%;
         }
         
-        .half-court {
-          width: 2px;
-          height: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          background: linear-gradient(180deg, rgba(200, 150, 58, 0.8) 0%, rgba(200, 150, 58, 0.3) 100%);
+        .key-top {
+          position: absolute;
+          top: 0;
+          left: 30%;
+          width: 40%;
+          height: 80px;
+          border-bottom: 3px solid rgba(200, 150, 58, 0.7);
+          border-left: 3px solid rgba(200, 150, 58, 0.7);
+          border-right: 3px solid rgba(200, 150, 58, 0.7);
         }
         
-        .center-circle {
-          width: 90px;
-          height: 90px;
+        .free-throw-circle-top {
+          position: absolute;
+          top: 75px;
+          left: 38%;
+          width: 24%;
+          height: 40px;
+          border: 3px solid rgba(200, 150, 58, 0.5);
           border-radius: 50%;
-          left: calc(50% - 45px);
-          top: calc(50% - 45px);
           background: transparent;
-          border-width: 3px;
+        }
+        
+        .backboard-top {
+          position: absolute;
+          top: 15px;
+          left: 35%;
+          width: 30%;
+          height: 8px;
+          background: rgba(255, 255, 255, 0.2);
+          border: 2px solid rgba(255, 255, 255, 0.4);
+        }
+        
+        /* Bottom Court Lines */
+        .three-point-bottom {
+          position: absolute;
+          bottom: 0;
+          left: 5%;
+          width: 90%;
+          height: 120px;
+          border-top: 3px solid rgba(200, 150, 58, 0.7);
+          border-radius: 50% 50% 0 0;
+        }
+        
+        .key-bottom {
+          position: absolute;
+          bottom: 0;
+          left: 30%;
+          width: 40%;
+          height: 80px;
+          border-top: 3px solid rgba(200, 150, 58, 0.7);
+          border-left: 3px solid rgba(200, 150, 58, 0.7);
+          border-right: 3px solid rgba(200, 150, 58, 0.7);
+        }
+        
+        .free-throw-circle-bottom {
+          position: absolute;
+          bottom: 75px;
+          left: 38%;
+          width: 24%;
+          height: 40px;
+          border: 3px solid rgba(200, 150, 58, 0.5);
+          border-radius: 50%;
+          background: transparent;
+        }
+        
+        .backboard-bottom {
+          position: absolute;
+          bottom: 15px;
+          left: 35%;
+          width: 30%;
+          height: 8px;
+          background: rgba(255, 255, 255, 0.2);
+          border: 2px solid rgba(255, 255, 255, 0.4);
+        }
+        
+        /* Center Circle */
+        .center-circle {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 100px;
+          height: 100px;
+          border: 3px solid rgba(200, 150, 58, 0.7);
+          border-radius: 50%;
+          transform: translate(-50%, -50%);
         }
         
         .center-dot {
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-          left: calc(50% - 5px);
-          top: calc(50% - 5px);
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 12px;
+          height: 12px;
           background: #C8963A;
-          border: none;
-        }
-        
-        .three-point-left {
-          width: 180px;
-          height: 220px;
-          border-radius: 0 0 180px 180px;
-          left: -10px;
-          top: 30px;
-          border-left: none;
-          border-top: none;
-          border-width: 3px;
-        }
-        
-        .three-point-right {
-          width: 180px;
-          height: 220px;
-          border-radius: 0 0 180px 180px;
-          right: -10px;
-          top: 30px;
-          border-right: none;
-          border-top: none;
-          border-width: 3px;
-        }
-        
-        .key-left {
-          width: 140px;
-          height: 180px;
-          left: 40px;
-          top: 50px;
-          border-radius: 0 0 70px 70px;
-          border-left: none;
-          border-top: none;
-          border-width: 3px;
-        }
-        
-        .key-right {
-          width: 140px;
-          height: 180px;
-          right: 40px;
-          top: 50px;
-          border-radius: 0 0 70px 70px;
-          border-right: none;
-          border-top: none;
-          border-width: 3px;
-        }
-        
-        .free-throw-left {
-          width: 70px;
-          height: 70px;
           border-radius: 50%;
-          left: 75px;
-          top: 105px;
-          background: radial-gradient(circle, rgba(200, 150, 58, 0.2) 0%, transparent 70%);
+          transform: translate(-50%, -50%);
         }
         
-        .free-throw-right {
-          width: 70px;
-          height: 70px;
-          border-radius: 50%;
-          right: 75px;
-          top: 105px;
-          background: radial-gradient(circle, rgba(200, 150, 58, 0.2) 0%, transparent 70%);
-        }
-        
-        .corner-three-left {
-          width: 40px;
-          height: 50px;
-          left: 0;
-          top: 0;
-          border-left: none;
-          border-top: none;
-        }
-        
-        .corner-three-right {
-          width: 40px;
-          height: 50px;
-          right: 0;
-          top: 0;
-          border-right: none;
-          border-top: none;
-        }
-        
-        .hoop-assembly {
-          position: absolute;
-          bottom: 30px;
-          width: 60px;
-          height: 120px;
-        }
-        
-        .hoop-assembly.left { left: 20px; }
-        .hoop-assembly.right { right: 20px; }
-        
-        .backboard {
+        .half-court-line {
           position: absolute;
           top: 0;
-          width: 50px;
-          height: 35px;
-          background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-          border: 2px solid rgba(255,255,255,0.3);
-          transform-origin: center;
-        }
-        
-        .hoop-pole {
-          position: absolute;
-          top: 30px;
           left: 50%;
-          width: 6px;
-          height: 40px;
-          background: linear-gradient(90deg, #666 0%, #888 50%, #666 100%);
+          width: 3px;
+          height: 100%;
+          background: rgba(200, 150, 58, 0.6);
           transform: translateX(-50%);
         }
         
-        .hoop-bracket {
+        /* Top Hoop */
+        .hoop-top {
           position: absolute;
-          top: 65px;
-          left: 50%;
+          top: 35px;
+          left: 47%;
           transform: translateX(-50%);
         }
         
-        .hoop-ring {
-          width: 44px;
-          height: 44px;
+        .hoop-ring-top {
+          width: 45px;
+          height: 45px;
           border: 5px solid #E8593C;
           border-radius: 50%;
           position: relative;
         }
         
-        .hoop-net {
+        .hoop-net-top {
           position: absolute;
-          top: 100%;
+          bottom: -45px;
           left: 50%;
           transform: translateX(-50%);
-          width: 36px;
+          width: 38px;
           height: 50px;
-          background: 
-            repeating-linear-gradient(
-              180deg,
-              transparent 0px,
-              transparent 4px,
-              rgba(255,255,255,0.4) 4px,
-              rgba(255,255,255,0.4) 5px
-            ),
-            linear-gradient(180deg, rgba(200,200,200,0.3) 0%, transparent 100%);
+          background: repeating-linear-gradient(
+            180deg,
+            transparent 0px,
+            transparent 4px,
+            rgba(255,255,255,0.35) 4px,
+            rgba(255,255,255,0.35) 5px
+          );
           clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);
-          animation: netSway 2s ease-in-out infinite;
+          animation: netSwayTop 1.5s ease-in-out infinite;
         }
         
-        @keyframes netSway {
+        @keyframes netSwayTop {
           0%, 100% { transform: translateX(-50%) skewX(0deg); }
-          50% { transform: translateX(-50%) skewX(3deg); }
+          50% { transform: translateX(-50%) skewX(4deg); }
         }
         
-        .basketball-shot {
+        /* Bottom Hoop */
+        .hoop-bottom {
+          position: absolute;
+          bottom: 35px;
+          left: 47%;
+          transform: translateX(-50%);
+        }
+        
+        .hoop-ring-bottom {
+          width: 45px;
+          height: 45px;
+          border: 5px solid #E8593C;
+          border-radius: 50%;
+          position: relative;
+        }
+        
+        .hoop-net-bottom {
+          position: absolute;
+          top: -45px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 38px;
+          height: 50px;
+          background: repeating-linear-gradient(
+            0deg,
+            transparent 0px,
+            transparent 4px,
+            rgba(255,255,255,0.35) 4px,
+            rgba(255,255,255,0.35) 5px
+          );
+          clip-path: polygon(15% 0, 85% 0, 100% 100%, 0 100%);
+          animation: netSwayBottom 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes netSwayBottom {
+          0%, 100% { transform: translateX(-50%) skewX(0deg); }
+          50% { transform: translateX(-50%) skewX(-4deg); }
+        }
+        
+        /* Shot Animation */
+        .shot-ball {
           position: absolute;
           z-index: 10;
-          filter: drop-shadow(0 0 10px rgba(255, 140, 66, 0.8));
+          filter: drop-shadow(0 0 15px rgba(255, 140, 66, 0.8));
         }
         
-        .ball-swish {
+        /* Swish Effect */
+        .swish-effect {
           position: absolute;
-          z-index: 10;
-          filter: drop-shadow(0 0 8px rgba(255, 140, 66, 0.6));
-        }
-        
-        .score-flash {
-          position: absolute;
-          right: 60px;
-          top: 80px;
+          top: 60px;
+          left: 50%;
+          transform: translateX(-50%);
           font-family: 'Playfair Display', serif;
-          font-size: 28px;
+          font-size: 18px;
           font-weight: bold;
           color: #C8963A;
-          text-shadow: 0 0 20px rgba(200, 150, 58, 0.8);
+          text-shadow: 0 0 15px rgba(200, 150, 58, 0.9);
           z-index: 20;
         }
         
-        .player-silhouette {
+        /* Score Flash */
+        .score-flash {
           position: absolute;
-          width: 20px;
-          height: 50px;
-          background: linear-gradient(180deg, rgba(200, 150, 58, 0.3) 0%, transparent 100%);
-          border-radius: 10px 10px 5px 5px;
+          top: 100px;
+          right: 15%;
+          font-family: 'Playfair Display', serif;
+          font-size: 32px;
+          font-weight: bold;
+          color: #E8593C;
+          text-shadow: 0 0 20px rgba(232, 89, 60, 0.8);
+          z-index: 20;
         }
         
-        .player-1 { bottom: 100px; left: 50px; }
-        .player-2 { bottom: 100px; right: 50px; }
-        .player-3 { bottom: 140px; left: calc(50% - 10px); }
-        
-        .spotlight {
+        /* Players */
+        .player {
           position: absolute;
-          width: 150px;
-          height: 150px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-          pointer-events: none;
+          width: 18px;
+          height: 45px;
+          background: linear-gradient(180deg, rgba(200, 150, 58, 0.4) 0%, transparent 100%);
+          border-radius: 9px 9px 4px 4px;
         }
         
-        .left-spotlight { top: 50%; left: 10%; transform: translateY(-50%); }
-        .right-spotlight { top: 50%; right: 10%; transform: translateY(-50%); }
+        .player-offense { bottom: 140px; left: 20%; }
+        .player-defense { bottom: 140px; right: 20%; }
+        .player-wing { bottom: 200px; left: 50%; transform: translateX(-50%); }
         
+        /* Particles */
         .court-particle {
           position: absolute;
           background: #C8963A;
@@ -556,14 +473,41 @@ const Court3D = () => {
   )
 }
 
+const FloatingBall = ({ delay, x, y, size, duration }) => (
+  <motion.div
+    className="absolute pointer-events-none"
+    style={{
+      left: `${x}%`,
+      top: `${y}%`,
+      width: size,
+      height: size,
+    }}
+    initial={{ opacity: 0, scale: 0 }}
+    animate={{ 
+      opacity: [0, 0.7, 0.5, 0],
+      scale: [0, 1, 0.8, 0],
+      rotate: [0, 180, 360],
+      y: [0, -100, -200]
+    }}
+    transition={{
+      duration,
+      delay,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }}
+  >
+    <BasketballSVG size={size} />
+  </motion.div>
+)
+
 const ParticleField = () => {
-  const particles = Array.from({ length: 50 }, (_, i) => ({
+  const particles = Array.from({ length: 40 }, (_, i) => ({
     id: i,
     x: Math.random() * 100,
     y: Math.random() * 100,
     size: Math.random() * 3 + 1,
-    duration: Math.random() * 20 + 10,
-    delay: Math.random() * 10
+    duration: Math.random() * 15 + 8,
+    delay: Math.random() * 8
   }))
 
   return (
@@ -579,9 +523,9 @@ const ParticleField = () => {
             height: p.size,
           }}
           animate={{
-            opacity: [0, 1, 0],
-            y: [-20, -200, -400],
-            x: [0, Math.random() * 100 - 50, Math.random() * 100 - 50]
+            opacity: [0, 0.6, 0],
+            y: [-20, -150, -300],
+            x: [0, Math.random() * 40 - 20, Math.random() * 60 - 30]
           }}
           transition={{
             duration: p.duration,
@@ -662,12 +606,10 @@ export default function LandingPage() {
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0])
   
   const [hasSavedGame, setHasSavedGame] = useState(false)
-  const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('hardwood_gm')
     setHasSavedGame(!!saved)
-    setTimeout(() => setIsLoaded(true), 100)
   }, [])
 
   const handleStartGame = () => {
@@ -680,22 +622,22 @@ export default function LandingPage() {
 
   return (
     <div ref={containerRef} className="min-h-screen relative overflow-hidden bg-stadium">
-      {/* Background Gradient */}
+      {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-stadium via-ink to-stadium" />
       
-      {/* Particle Effects */}
+      {/* Particles */}
       <ParticleField />
       
       {/* Floating Basketballs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(8)].map((_, i) => (
+        {[...Array(6)].map((_, i) => (
           <FloatingBall
             key={i}
-            delay={i * 0.5}
-            x={10 + (i * 12)}
-            y={20 + (i % 3) * 25}
-            size={30 + (i % 3) * 10}
-            duration={8 + (i % 4)}
+            delay={i * 0.8}
+            x={8 + (i * 15)}
+            y={15 + (i % 3) * 20}
+            size={25 + (i % 2) * 15}
+            duration={6 + (i % 3)}
           />
         ))}
       </div>
@@ -705,7 +647,7 @@ export default function LandingPage() {
         className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4"
         style={{ y, opacity }}
       >
-        {/* Logo Animation */}
+        {/* Logo */}
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
@@ -714,13 +656,11 @@ export default function LandingPage() {
         >
           <div className="relative">
             <motion.div
-              className="absolute -inset-4 bg-gradient-to-r from-gold/20 via-rust/20 to-gold/20 blur-2xl rounded-full"
-              animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
+              className="absolute -inset-6 bg-gradient-to-r from-gold/20 via-rust/20 to-gold/20 blur-3xl rounded-full"
+              animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.7, 0.4] }}
               transition={{ duration: 3, repeat: Infinity }}
             />
-            <div className="relative w-32 h-32 md:w-40 md:h-40">
-              <BasketballSVG size={160} className="w-full h-full" />
-            </div>
+            <BasketballSVG size={140} className="relative z-10" />
           </div>
         </motion.div>
 
@@ -734,17 +674,16 @@ export default function LandingPage() {
           <h1 className="font-display text-5xl md:text-7xl lg:text-8xl text-cream tracking-tight mb-2">
             <span className="block">HARDWOOD</span>
             <motion.span 
-              className="block text-gold"
-              initial={{ backgroundPosition: '200% center' }}
-              animate={{ backgroundPosition: '0% center' }}
-              transition={{ duration: 1.5, delay: 0.8 }}
+              className="block"
               style={{
                 background: 'linear-gradient(90deg, #C8963A 0%, #FF8C42 50%, #C8963A 100%)',
                 backgroundSize: '200% auto',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
+                backgroundClip: 'text',
               }}
+              animate={{ backgroundPosition: ['200% center', '0% center'] }}
+              transition={{ duration: 2, delay: 0.8 }}
             >
               MANAGER
             </motion.span>
@@ -772,15 +711,9 @@ export default function LandingPage() {
             onClick={handleStartGame}
             whileHover={{ scale: 1.05, boxShadow: '0 0 40px rgba(200, 150, 58, 0.5)' }}
             whileTap={{ scale: 0.98 }}
-            className="px-10 py-4 bg-gradient-to-r from-gold to-rust text-stadium font-mono text-lg uppercase tracking-wider rounded-lg relative overflow-hidden group"
+            className="px-10 py-4 bg-gradient-to-r from-gold to-rust text-stadium font-mono text-lg uppercase tracking-wider rounded-lg"
           >
-            <span className="relative z-10">{hasSavedGame ? 'Continue Career' : 'New Game'}</span>
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-rust to-gold"
-              initial={{ x: '100%' }}
-              whileHover={{ x: 0 }}
-              transition={{ duration: 0.3 }}
-            />
+            {hasSavedGame ? 'Continue Career' : 'New Game'}
           </motion.button>
           
           <motion.button
@@ -788,7 +721,7 @@ export default function LandingPage() {
             whileTap={{ scale: 0.98 }}
             className="px-10 py-4 border-2 border-gold/50 text-gold font-mono text-lg uppercase tracking-wider rounded-lg hover:bg-gold/10 transition-colors"
           >
-            <Link to="/new-game" className="relative z-10">How to Play</Link>
+            <Link to="/new-game">How to Play</Link>
           </motion.button>
         </motion.div>
 
@@ -814,35 +747,36 @@ export default function LandingPage() {
 
       {/* 3D Court Section */}
       <motion.section 
-        className="relative z-10 py-32 flex flex-col items-center justify-center overflow-hidden"
+        className="relative z-10 py-32 px-4"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true, margin: "-100px" }}
       >
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          whileInView={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 1 }}
-          viewport={{ once: true }}
-          className="relative"
-        >
+        <div className="max-w-4xl mx-auto">
           <motion.div
-            className="absolute -inset-20 bg-gradient-to-t from-gold/10 via-transparent to-transparent blur-3xl"
-            animate={{ opacity: [0.3, 0.6, 0.3] }}
-            transition={{ duration: 4, repeat: Infinity }}
-          />
-          <Court3D />
-        </motion.div>
-        
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          viewport={{ once: true }}
-          className="mt-16 font-serif text-2xl text-cream/60 italic"
-        >
-          "The court is where legends are made"
-        </motion.p>
+            initial={{ scale: 0.9, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 1 }}
+            viewport={{ once: true }}
+          >
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-t from-gold/10 via-transparent to-transparent blur-3xl"
+              animate={{ opacity: [0.3, 0.6, 0.3] }}
+              transition={{ duration: 4, repeat: Infinity }}
+            />
+            <Court3D />
+          </motion.div>
+          
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            viewport={{ once: true }}
+            className="mt-16 text-center font-serif text-2xl text-cream/60 italic"
+          >
+            "The court is where legends are made"
+          </motion.p>
+        </div>
       </motion.section>
 
       {/* Features Section */}
@@ -858,62 +792,29 @@ export default function LandingPage() {
           </motion.h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              viewport={{ once: true }}
-              className="text-center p-8 rounded-2xl bg-ink/50 border border-gold/20 hover:border-gold/40 transition-colors group"
-            >
+            {[
+              { icon: '🏀', title: '24-Game Seasons', desc: 'Compete in intense seasons with playoff drama, trade deadlines, and championship glory.' },
+              { icon: '📈', title: 'Player Development', desc: 'Watch your players grow through 8 unique pathways. Shape raw talent into superstars.' },
+              { icon: '🏆', title: 'Build Your Dynasty', desc: 'Legacy points, Hall of Fame, championship rings. Your decisions write the story.' },
+            ].map((feature, i) => (
               <motion.div
-                className="text-6xl mb-6"
-                whileHover={{ scale: 1.2, rotate: 10 }}
+                key={i}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="text-center p-8 rounded-2xl bg-ink/50 border border-gold/20 hover:border-gold/40 transition-colors"
               >
-                🏀
+                <motion.div
+                  className="text-6xl mb-6"
+                  whileHover={{ scale: 1.2, rotate: 10 }}
+                >
+                  {feature.icon}
+                </motion.div>
+                <h3 className="font-display text-2xl text-gold mb-4">{feature.title}</h3>
+                <p className="font-mono text-sm text-cream/60 leading-relaxed">{feature.desc}</p>
               </motion.div>
-              <h3 className="font-display text-2xl text-gold mb-4">24-Game Seasons</h3>
-              <p className="font-mono text-sm text-cream/60 leading-relaxed">
-                Compete in intense seasons with playoff drama, trade deadlines, and championship glory.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              viewport={{ once: true }}
-              className="text-center p-8 rounded-2xl bg-ink/50 border border-gold/20 hover:border-gold/40 transition-colors group"
-            >
-              <motion.div
-                className="text-6xl mb-6"
-                whileHover={{ scale: 1.2, rotate: -10 }}
-              >
-                📈
-              </motion.div>
-              <h3 className="font-display text-2xl text-gold mb-4">Player Development</h3>
-              <p className="font-mono text-sm text-cream/60 leading-relaxed">
-                Watch your players grow through 8 unique pathways. Shape raw talent into superstars.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              viewport={{ once: true }}
-              className="text-center p-8 rounded-2xl bg-ink/50 border border-gold/20 hover:border-gold/40 transition-colors group"
-            >
-              <motion.div
-                className="text-6xl mb-6"
-                whileHover={{ scale: 1.2, rotate: 10 }}
-              >
-                🏆
-              </motion.div>
-              <h3 className="font-display text-2xl text-gold mb-4">Build Your Dynasty</h3>
-              <p className="font-mono text-sm text-cream/60 leading-relaxed">
-                Legacy points, Hall of Fame, championship rings. Your decisions write the story.
-              </p>
-            </motion.div>
+            ))}
           </div>
         </div>
       </section>
@@ -960,7 +861,7 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      {/* Ambient Glow Effects */}
+      {/* Ambient Glows */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gold/5 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-rust/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
