@@ -367,22 +367,7 @@ export default function Scouting() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-ink rounded-lg border border-stadium p-4">
-            <h3 className="font-mono text-sm text-cream mb-4">Your Draft Picks</h3>
-            <div className="space-y-2">
-              {draftPicks?.map(pick => (
-                <div key={pick.id} className="flex items-center justify-between py-2 px-3 bg-stadium rounded">
-                  <span className="text-sm text-cream font-mono">
-                    Round {pick.round} · Pick {pick.pick_number}
-                  </span>
-                </div>
-              )) || (
-                <p className="text-xs text-muted/60 font-mono">No picks available</p>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-ink rounded-lg border border-stadium p-4">
+          <div className="bg-ink rounded-lg border border-stadium p-4" data-tutorial="scouts">
             <h3 className="font-mono text-sm text-cream mb-4">Scouting Staff</h3>
             <div className="space-y-3">
               {scouts.length > 0 ? scouts.map(scout => {

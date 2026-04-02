@@ -24,6 +24,7 @@ export default function PageHeader({ title, subtitle, action }) {
           <button
             onClick={isObj ? action.onClick : undefined}
             disabled={isObj ? action.disabled : undefined}
+            data-tutorial={action['data-tutorial']}
             className={`px-4 py-2 bg-ink text-cream font-mono text-[13px] uppercase tracking-wider border border-muted/30 hover:border-rust hover:text-rust transition-colors ${
               isObj && action.disabled ? 'opacity-50 cursor-not-allowed' : ''
             }`}

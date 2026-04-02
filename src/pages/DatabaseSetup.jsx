@@ -181,7 +181,7 @@ export default function DatabaseSetup() {
             DATABASE SETUP
           </h1>
           <p className="font-serif text-lg text-muted/60 italic">
-            Build your Hardwood Manager database on Supabase
+            Build your Bashketbal database on Supabase
           </p>
         </div>
 

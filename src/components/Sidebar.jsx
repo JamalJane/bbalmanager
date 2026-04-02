@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { NavLink, useLocation, Link } from 'react-router-dom'
+import { NavLink, useLocation, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useGame } from '../context/GameContext'
 import { useCountUp } from '../hooks/useCountUp'
@@ -24,9 +24,11 @@ const navItems = [
 
 export default function Sidebar() {
   const location = useLocation()
-  const { activeTeam, gameState, coachPayroll } = useGame()
+  const navigate = useNavigate()
+  const { activeTeam, gameState, coachPayroll, setGmProfile, setActiveTeam, setActiveSeason } = useGame()
   const legacyDisplay = useCountUp(gameState?.legacyScore ?? 0)
   const [totalPayroll, setTotalPayroll] = useState(0)
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false)
   const isOffseason = (gameState?.currentWeek ?? 1) > (gameState?.totalWeeks ?? 12)
 
   useEffect(() => {
@@ -52,6 +54,18 @@ export default function Sidebar() {
   const capSpace = HARD_CAP - totalPayroll - coachPayroll
   const capPct = Math.round(((totalPayroll + coachPayroll) / HARD_CAP) * 100)
   const overCap = capSpace < 0
+
+  const handleQuitGame = () => {
+    localStorage.removeItem('bashketbal_gm')
+    localStorage.removeItem('bashketbal_team')
+    localStorage.removeItem('bashketbal_season')
+    localStorage.removeItem('bashketbal_game_state')
+    setGmProfile(null)
+    setActiveTeam(null)
+    setActiveSeason(null)
+    setShowQuitConfirm(false)
+    navigate('/new-game')
+  }
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-[220px] bg-ink flex flex-col z-40">
@@ -122,6 +136,33 @@ export default function Sidebar() {
             {legacyDisplay.toLocaleString()}
           </p>
         </div>
+
+        {!showQuitConfirm ? (
+          <button
+            onClick={() => setShowQuitConfirm(true)}
+            className="w-full py-2 text-xs font-mono text-muted/60 hover:text-ember transition-colors border border-muted/20 rounded hover:border-ember/50"
+          >
+            Quit & Start New
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-muted/60 font-mono text-center">Quit this game?</p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleQuitGame}
+                className="flex-1 py-1.5 text-xs font-mono text-cream bg-ember/20 hover:bg-ember/30 rounded transition-colors"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => setShowQuitConfirm(false)}
+                className="flex-1 py-1.5 text-xs font-mono text-muted hover:text-cream transition-colors border border-muted/20 rounded hover:border-muted/50"
+              >
+                No
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   )

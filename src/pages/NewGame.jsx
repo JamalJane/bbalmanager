@@ -102,7 +102,7 @@ const STEP_TITLES = {
 
 export default function NewGame() {
   const navigate = useNavigate()
-  const { setGmProfile, setActiveTeam, setActiveSeason } = useGame()
+  const { setGmProfile, setActiveTeam, setActiveSeason, startTutorial } = useGame()
 
   const [step, setStep] = useState(1)
   const [gmName, setGmName] = useState('')
@@ -200,6 +200,7 @@ export default function NewGame() {
       setGmProfile(gmData)
       setActiveTeam(selectedTeamData)
       setActiveSeason(seasonData)
+      startTutorial()
 
       navigate('/')
     } catch (err) {
@@ -232,7 +233,7 @@ export default function NewGame() {
             transition={{ delay: 0.1 }}
             className="font-display text-5xl text-cream tracking-wider mb-3"
           >
-            HARDWOOD MANAGER
+            BASHKETBAL
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}

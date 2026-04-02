@@ -1,4 +1,4 @@
-# Hardwood Manager
+# Bashketbal
 
 A basketball franchise management game built with React, Vite, and Supabase.
 

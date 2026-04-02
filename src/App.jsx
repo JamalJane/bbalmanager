@@ -18,7 +18,8 @@ import NewGame from './pages/NewGame'
 import DatabaseSetup from './pages/DatabaseSetup'
 import LandingPage from './pages/LandingPage'
 import HowToPlay from './pages/HowToPlay'
-import { GameProvider } from './context/GameContext'
+import TutorialOverlay from './components/TutorialOverlay'
+import { GameProvider, useGame } from './context/GameContext'
 import { CinematicProvider } from './context/CinematicContext'
 import CinematicOverlay from './components/CinematicOverlay'
 
@@ -80,14 +81,14 @@ export default function App() {
     setIsReady(true)
   }, [])
 
-  const savedGm = typeof localStorage !== 'undefined' ? localStorage.getItem('hardwood_gm') : null
+  const savedGm = typeof localStorage !== 'undefined' ? localStorage.getItem('bashketbal_gm') : null
   const hasSavedGame = !!savedGm
 
   if (!isReady) {
     return (
       <div className="min-h-screen bg-stadium flex items-center justify-center">
         <div className="text-center">
-          <h1 className="font-display text-4xl text-cream mb-4">HARDWOOD MANAGER</h1>
+          <h1 className="font-display text-4xl text-cream mb-4">BASHKETBAL</h1>
           <p className="font-mono text-muted/60 animate-pulse">Loading...</p>
         </div>
       </div>
@@ -95,7 +96,7 @@ export default function App() {
   }
 
   const showLayout = hasSavedGame && !isNewGame && !isLandingPage
-  const showLanding = !hasSavedGame || isLandingPage
+  const showLanding = !hasSavedGame && isLandingPage
 
   const content = (
     <Routes location={location} key={location.pathname}>
@@ -130,8 +131,20 @@ export default function App() {
             <AnimatePresence mode="wait">{content}</AnimatePresence>
           )}
           {showLayout && <CinematicOverlay />}
+          {showLayout && <TutorialOverlayWrapper />}
         </CinematicProvider>
       </GameProvider>
     </ErrorBoundary>
+  )
+}
+
+function TutorialOverlayWrapper() {
+  const { gameState, advanceTutorial, skipTutorial } = useGame()
+  return (
+    <TutorialOverlay
+      tutorialState={gameState.tutorial}
+      onComplete={advanceTutorial}
+      onSkip={skipTutorial}
+    />
   )
 }

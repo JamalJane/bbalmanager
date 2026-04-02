@@ -3,9 +3,8 @@ import { supabase } from '../lib/supabase'
 
 const GameContext = createContext()
 
-const MOCK_INBOX = [
-  { id: 1, category: 'trade', description: 'Welcome to Hardwood Manager! Set up your team and start your season.', isNew: true },
-  { id: 2, category: 'scouting', description: 'Head to the Draft Board to scout prospects for your future.', isNew: true },
+const TUTORIAL_INBOX = [
+  { id: 'tutorial-0', category: 'media', description: '🎓 Welcome, GM! Click to learn how to play Bashketbal.', isNew: true, isTutorial: true, tutorialStep: 0 },
 ]
 
 export function GameProvider({ children }) {
@@ -18,12 +17,17 @@ export function GameProvider({ children }) {
     chemistry: 50,
     legacyScore: 0,
     nextGame: null,
-    inbox: MOCK_INBOX,
+    inbox: [],
     storyBeats: [],
     gameFeed: [],
     momentum: 'neutral',
     isClutch: false,
     gamesPlayedThisWeek: false,
+    tutorial: {
+      completed: false,
+      skipped: false,
+      currentStep: 0,
+    },
   })
 
   const [gmProfile, setGmProfile] = useState(null)
@@ -31,10 +35,9 @@ export function GameProvider({ children }) {
   const [activeSeason, setActiveSeason] = useState(null)
   const [coachPayroll, setCoachPayroll] = useState(0)
 
-  // Load saved game state from localStorage
   useEffect(() => {
     try {
-      const savedGameState = localStorage.getItem('hardwood_game_state')
+      const savedGameState = localStorage.getItem('bashketbal_game_state')
       if (savedGameState) {
         const parsed = JSON.parse(savedGameState)
         setGameState(prev => ({ ...prev, ...parsed }))
@@ -44,10 +47,9 @@ export function GameProvider({ children }) {
     }
   }, [])
 
-  // Save game state to localStorage whenever it changes
   useEffect(() => {
     try {
-      localStorage.setItem('hardwood_game_state', JSON.stringify(gameState))
+      localStorage.setItem('bashketbal_game_state', JSON.stringify(gameState))
     } catch (err) {
       console.warn('Could not save game state:', err)
     }
@@ -56,9 +58,9 @@ export function GameProvider({ children }) {
   useEffect(() => {
     const loadSavedGame = async () => {
       try {
-        const savedGm = localStorage.getItem('hardwood_gm')
-        const savedTeam = localStorage.getItem('hardwood_team')
-        const savedSeason = localStorage.getItem('hardwood_season')
+        const savedGm = localStorage.getItem('bashketbal_gm')
+        const savedTeam = localStorage.getItem('bashketbal_team')
+        const savedSeason = localStorage.getItem('bashketbal_season')
 
         if (savedGm) {
           const gm = JSON.parse(savedGm)
@@ -83,7 +85,6 @@ export function GameProvider({ children }) {
                 }))
               }
 
-              // Load team record from database
               const { data: teamData } = await supabase
                 .from('teams')
                 .select('wins, losses')
@@ -159,8 +160,43 @@ export function GameProvider({ children }) {
 
   const refreshChemistry = useCallback(async (teamId) => {
     if (!teamId) return
-    // Chemistry is now calculated dynamically, use default value
     setGameState(prev => ({ ...prev, chemistry: 50 }))
+  }, [])
+
+  const startTutorial = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      inbox: TUTORIAL_INBOX,
+      tutorial: { completed: false, skipped: false, currentStep: 0 },
+    }))
+  }, [])
+
+  const advanceTutorial = useCallback(() => {
+    setGameState(prev => {
+      const nextStep = prev.tutorial.currentStep + 1
+      if (nextStep >= 6) {
+        return {
+          ...prev,
+          inbox: prev.inbox.filter(item => !item.isTutorial),
+          tutorial: { ...prev.tutorial, completed: true, currentStep: nextStep },
+        }
+      }
+      return {
+        ...prev,
+        tutorial: { ...prev.tutorial, currentStep: nextStep },
+        inbox: prev.inbox.map(item => 
+          item.isTutorial ? { ...item, tutorialStep: nextStep } : item
+        ),
+      }
+    })
+  }, [])
+
+  const skipTutorial = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      inbox: prev.inbox.filter(item => !item.isTutorial),
+      tutorial: { completed: true, skipped: true, currentStep: 99 },
+    }))
   }, [])
 
   return (
@@ -181,6 +217,9 @@ export function GameProvider({ children }) {
       setCoachPayroll,
       refreshCoachPayroll,
       refreshChemistry,
+      startTutorial,
+      advanceTutorial,
+      skipTutorial,
     }}>
       {children}
     </GameContext.Provider>

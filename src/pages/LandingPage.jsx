@@ -608,7 +608,7 @@ export default function LandingPage() {
   const [hasSavedGame, setHasSavedGame] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem('hardwood_gm')
+    const saved = localStorage.getItem('bashketbal_gm')
     setHasSavedGame(!!saved)
   }, [])
 
@@ -672,9 +672,7 @@ export default function LandingPage() {
           className="text-center mb-6"
         >
           <h1 className="font-display text-5xl md:text-7xl lg:text-8xl text-cream tracking-tight mb-2">
-            <span className="block">HARDWOOD</span>
             <motion.span 
-              className="block"
               style={{
                 background: 'linear-gradient(90deg, #C8963A 0%, #FF8C42 50%, #C8963A 100%)',
                 backgroundSize: '200% auto',
@@ -683,9 +681,9 @@ export default function LandingPage() {
                 backgroundClip: 'text',
               }}
               animate={{ backgroundPosition: ['200% center', '0% center'] }}
-              transition={{ duration: 2, delay: 0.8 }}
+              transition={{ duration: 2, delay: 0.3 }}
             >
-              MANAGER
+              BASHKETBAL
             </motion.span>
           </h1>
         </motion.div>

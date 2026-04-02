@@ -330,6 +330,7 @@ export default function GameDay() {
                 label: isSimulating ? 'Playing...' : 'Play Game',
                 onClick: handlePlayGame,
                 disabled: isSimulating,
+                'data-tutorial': 'play-button',
               }
             }
           />

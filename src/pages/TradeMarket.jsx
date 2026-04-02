@@ -377,7 +377,8 @@ export default function TradeMarket() {
         subtitle={`${trades?.length || 0} active trades`}
         action={{
           label: 'New Trade',
-          onClick: () => setShowNewTrade(true)
+          onClick: () => setShowNewTrade(true),
+          'data-tutorial': 'new-trade',
         }}
       />
 

@@ -45,7 +45,7 @@ export default function HowToPlay() {
               Getting Started
             </h2>
             <div className="space-y-4 text-cream/80 font-mono text-sm leading-relaxed">
-              <p>Welcome to Hardwood Manager! You're about to take control of a professional basketball franchise.</p>
+              <p>Welcome to Bashketbal! You're about to take control of a professional basketball franchise.</p>
               <ol className="list-decimal list-inside space-y-2 ml-4">
                 <li>Choose your GM name and management style</li>
                 <li>Select from 30 unique franchises across the league</li>

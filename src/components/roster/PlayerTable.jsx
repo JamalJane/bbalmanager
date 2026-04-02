@@ -61,6 +61,7 @@ export default function PlayerTable({ players, onSelectPlayer, selectedId }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.1, delay: index * 0.03 }}
               onClick={() => onSelectPlayer(player)}
+              data-tutorial={index === 0 ? 'player-row' : undefined}
               className={`
                 grid grid-cols-12 gap-4 p-4 cursor-pointer transition-all
                 hover:-translate-y-0.5 hover:bg-stadium/50
