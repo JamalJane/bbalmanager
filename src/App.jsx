@@ -17,6 +17,7 @@ import SeasonRecap from './pages/SeasonRecap'
 import NewGame from './pages/NewGame'
 import DatabaseSetup from './pages/DatabaseSetup'
 import LandingPage from './pages/LandingPage'
+import HowToPlay from './pages/HowToPlay'
 import { GameProvider } from './context/GameContext'
 import { CinematicProvider } from './context/CinematicContext'
 import CinematicOverlay from './components/CinematicOverlay'
@@ -101,6 +102,7 @@ export default function App() {
       {showLanding ? (
         <>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/how-to-play" element={<HowToPlay />} />
           <Route path="/new-game" element={<NewGame />} />
           <Route path="/database-setup" element={<DatabaseSetup />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -721,7 +721,7 @@ export default function LandingPage() {
             whileTap={{ scale: 0.98 }}
             className="px-10 py-4 border-2 border-gold/50 text-gold font-mono text-lg uppercase tracking-wider rounded-lg hover:bg-gold/10 transition-colors"
           >
-            <Link to="/new-game">How to Play</Link>
+            <Link to="/how-to-play">How to Play</Link>
           </motion.button>
         </motion.div>
 
