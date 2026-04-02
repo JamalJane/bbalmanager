@@ -1,0 +1,404 @@
+HARDWOOD MANAGER
+Product Requirements Document
+Version 1.0 | March 2026 | Status: In Design
+Stack: React + Vite | Tailwind CSS | Supabase
+
+A web-based basketball franchise management game built with React + Supabase.
+
+================================================================================
+1. PRODUCT OVERVIEW
+================================================================================
+
+1.1 Vision
+-----------
+Hardwood Manager is a web-based basketball franchise management game with a
+clean vintage aesthetic. The player takes on the role of a head GM, building a
+franchise from the ground up across multiple seasons. Every decision — who to
+draft, how to develop players, who to sign, how to manage the locker room —
+compounds over time into a unique franchise story.
+
+The core differentiator is a living franchise narrative. Players are not static
+numbers. They have personas, development pathways, signature tendencies,
+chemistry with teammates, and careers that arc in response to your decisions.
+The game feels like a sports documentary you are directing in real time.
+
+1.2 Target Audience
+-------------------
+- Sports management game fans (Football Manager, NBA 2K MyGM, Retro Bowl)
+- Basketball fans who want strategy over simulation
+- Players who enjoy narrative-driven games with meaningful decisions
+- Desktop browser users, age 16-35
+
+1.3 Key Differentiators
+------------------------
+- Player persona system: 8 archetypes, 79 sub-personas, each affecting
+  development, chemistry, and story
+- Development pathways: 8 pathways per player, persona-pathway compatibility
+  matrix drives growth
+- Signature system: Every developed player gets a tendency, signature move,
+  and quirk
+- Franchise narrative: Template-based story beats generated from real game data
+- Living league: All 30 teams sim every week, standings and draft values update
+  in real time
+- Legacy system: Hall of Fame, franchise records, and legacy score persist
+  across all seasons
+
+1.4 Platform
+------------
+Platform:   Web browser (desktop first)
+Framework:  React + Vite
+Styling:    Tailwind CSS with custom vintage palette
+Database:   Supabase (PostgreSQL)
+Hosting:    TBD
+
+================================================================================
+2. CORE GAME LOOP
+================================================================================
+
+2.1 Season Structure
+--------------------
+A season consists of four phases. The weekly tick is the heartbeat — every
+week all 30 teams advance simultaneously.
+
+  Early (Weeks 1-6):   Persona reveals, dev ticks begin, all-star voting opens
+  Mid (Weeks 7-12):    Trade deadline, all-star break, playoff race begins
+  Late (Weeks 13-24):  Playoff push, awards race, chemistry peaks
+  Playoffs:            3 rounds, best of 3 series, top 6 teams
+  Offseason:           Extensions, draft, free agency, pathway resets, goal
+
+2.2 Weekly Tick Sequence
+------------------------
+Every week the following happens in order, simultaneously for all 30 teams:
+
+  1. Your game simulates with full play-by-play and key moments
+  2. All 29 AI games simulate mathematically in the background
+  3. Standings recalculate for all 30 teams
+  4. Development ticks fire for every player on every roster
+  5. Chemistry pairs update for your roster
+  6. Story beats check triggers for your team
+  7. Draft pick projected values update based on new standings
+  8. Dashboard refreshes with new world state
+
+2.3 New Game Setup
+------------------
+4-step onboarding flow styled as a vintage front office appointment:
+
+  Step 1: Enter manager name — persists on every screen as GM: [Name]
+  Step 2: Choose league — fictional NBA-inspired structure, 30 teams
+  Step 3: Choose team — cards with rating (A-D), difficulty tag, flavor text
+  Step 4: Confirm appointment — styled as official memo, Accept the Position
+
+================================================================================
+3. GAME SYSTEMS
+================================================================================
+
+3.1 System Overview (Priority Ratings: P0=MVP, P1=V1.1, P2=V1.2)
+-------------------------------------------------------------------
+  Player Personas          8 categories, 79 sub-personas                    P0
+  Development Pathways     8 pathways with persona compatibility matrix      P0
+  Game Sim Engine          Weekly tick, 5 key moments, 3 view modes          P0
+  Team Chemistry           Pair scores roll up to team score                 P0
+  Seasonal Draft           3 rounds, scouting, combine, pick trading         P0
+  Free Agency              Offseason + deadline, persona-driven demands      P1
+  Trade System             Both directions, value formula, 3-round loop      P1
+  Season Progression       24 games, top 6 playoffs, awards, all-star        P0
+  Offseason Flow           6-week open window, extensions, resets            P1
+  Signature System         Tendency + signature move + quirk per player      P1
+  Story Beats              Template engine, 12 event types, 55+ templates    P0
+  Hall of Fame             Career induction, ceremony screen                 P2
+  Records System           Franchise records tracked across all seasons      P2
+  Legacy Score             Persistent GM career score across all seasons     P1
+  League Sim               All 30 teams sim weekly                           P0
+  GM Reputation            Three rep scores: loyalty, dev, win-now           P1
+  Coaching Staff           Hire, upgrade, specialize — dev boost multipliers P1
+
+3.2 Player Persona System
+--------------------------
+8 primary categories, 7-10 sub-personas each. Hidden at generation, reveals
+after half a season of observation.
+
+  Raw Diamond         Young, unpolished, high ceiling. 10 sub-personas.
+  Quiet Assassin      Low maintenance, clutch performer. 10 sub-personas.
+  Locker Room Cancer  Elite talent that corrodes chemistry. 10 sub-personas.
+  Underdog            Hidden will, outperforms rating. 10 sub-personas.
+  Fading Legend       Veteran in decline, still gives. 10 sub-personas.
+  Franchise Cornerstone  Born to lead, demands commitment. 10 sub-personas.
+  Mercenary           Purely transactional, no loyalty. 9 sub-personas.
+  Late Bloomer        Looks average, surprise arc incoming. 10 sub-personas.
+
+3.3 Development Pathway System
+--------------------------------
+8 pathways per player per season. Persona-pathway compatibility creates
+synergy (up to 1.5x growth) or conflict (down to 0.55x with morale hit).
+Mid-season switch incurs a growth pause penalty.
+
+  Slasher       Finishing, speed, athleticism. Tags: Relentless, Foul Magnet
+  Sharpshooter  Shooting, off-ball movement. Tags: Hot Hand, Corner Specialist
+  Floor General Playmaking, IQ. Tags: Dimer, Court Vision
+  Lockdown      Defense, any position. Tags: Pest, Stopper
+  Stretch Big   Shooting for bigs. Tags: Floor Spacer, Face-Up Threat
+  Enforcer      Interior, rebounding. Tags: Brick Wall, Rim Protector
+  Facilitator   Passing, hustle. Tags: Glue Guy, Secondary Playmaker
+  Two-Way       Balanced growth. Tags: Swiss Army, Two-Way Player
+
+3.4 Game Simulation Engine
+---------------------------
+How winning and losing works:
+
+  Team Strength = (Starter avg overall x chemistry mult) + coach bonus + home court
+
+  Chemistry multipliers:
+    70+ chemistry = 1.03x boost
+    40-69         = 1.0x neutral
+    Below 40      = 0.97x penalty
+
+  Home court = flat +3 to home team strength
+  Coach bonus = (best coach level / 5) x 2 — max +2
+
+  Variance = +-8 applied independently to each team
+  Final scores map to realistic range: 85-115 points
+
+  5 key moment types:
+    Momentum swing   One team on a run, banner fires in feed
+    Clutch time      Final 2 minutes of close games
+    Persona moment   Player-specific card with flavor from persona sub
+    Injury scare     Player exits feed, status update pending
+    Breakout alert   Player having an outlier performance
+
+  GM interventions:
+    Substitution    Fresh player gets 1.05x multiplier on next 3 possessions
+    Timeout         Resets opponent run counter during momentum swing
+    Play call       Routes possession through highest-overall player (1.08x)
+    Double team     Reduces opponent clutch probability by 40%
+
+3.5 Team Chemistry
+-------------------
+Pair scores (0-100) roll up to team score, weighted by minutes played.
+4 drivers update scores weekly:
+  - Persona compatibility ceiling (determines max possible score)
+  - Time together (+1 per week, capped at ceiling)
+  - Big moments (wins +5, losses -4, trade demands -5 to all)
+  - Coach personality (dev specialist = passive +5 per season)
+
+Relationship types:
+  90-100  Best friends  +dev speed 15%, sim boost
+  70-89   Bonded        +dev speed 10%, small sim boost
+  50-69   Neutral       No effect
+  30-49   Tense         Slight sim penalty
+  0-29    Toxic/Beef    Morale hit, story beat fires, possible trade demand
+
+================================================================================
+4. DATABASE ARCHITECTURE
+================================================================================
+
+4.1 Technology
+--------------
+Supabase (PostgreSQL) with Row Level Security. UUID primary keys throughout.
+Supabase JS client connects directly from React frontend using anon key.
+
+4.2 Migration Files
+-------------------
+  hardwood_complete.sql         Base schema — teams, players, rosters,
+                                seasons, game_log, trades, persona system,
+                                coaching staff, narrative events
+  hardwood_migration_v2.sql     Dev pathways, compatibility matrix, story
+                                templates (55 seeded), game state, play_by_play
+  hardwood_migration_v3_draft.sql  Draft classes, prospects, draft picks,
+                                scouting, combine results, draft board, lottery
+  hardwood_migration_v4.sql     Free agency, contracts, signatures, trade
+                                engine, season progression, playoffs, awards,
+                                chemistry matrix, HOF, records, legacy score,
+                                offseason, AI team profiles
+
+4.3 Core Tables (40+ total)
+-----------------------------
+  teams                       30 teams with city, colors, difficulty
+  players                     All attributes, persona, pathway, morale
+  rosters                     Team-player assignments with pathway
+  seasons                     Active season tracker
+  game_log                    Every game result
+  gm_profiles                 Manager name, rep scores, legacy score
+  persona_definitions         79 sub-personas seeded
+  dev_pathway_definitions     8 pathways seeded
+  persona_pathway_compatibility  Synergy/conflict matrix seeded
+  story_templates             55 templates across 12 event types
+  narrative_events            Story beats per season/team/player
+  persona_evolution_log       Full persona shift history
+  player_chemistry            Pair scores and relationship types
+  coaching_staff              Coach specialties and dev boost multipliers
+  draft_classes               One per season, tracks draft phase
+  prospects                   90 per class, granular visibility flags
+  draft_picks                 All pick slots, tradeable
+  game_state                  Live sim state per game
+  play_by_play                Flagged key moments per game
+  free_agent_pool             Available signings
+  contracts                   All active deals
+  player_signatures           Tendency, move, quirk per player
+  quirk_pool                  79 quirks seeded
+  signature_move_pool         40 named moves seeded
+  trade_offers                Full offer records
+  trade_block                 Players listed as available
+  ai_team_profiles            30 AI GMs with personalities seeded
+  team_relationships          Player vs AI team relationship scores
+  chemistry_compatibility_matrix  All persona pairing ceilings seeded
+  season_phases               Current phase tracker
+  playoff_brackets            Top 6 bracket per season
+  playoff_series              Individual series records
+  season_awards               MVP, DPOY, MIP results
+  season_recaps               Narrative summary at season end
+  hall_of_fame                Inducted players with ceremony data
+  hof_nominees                End-of-season nomination queue
+  franchise_records           All tracked records per GM profile
+  legacy_score_log            Every +/- event with reason
+  franchise_goals             One goal per season
+  offseason_log               All offseason actions tracked
+  ai_game_results             29 AI game results per week
+
+================================================================================
+5. FRONTEND ARCHITECTURE
+================================================================================
+
+5.1 Tech Stack
+--------------
+  Framework:  React (Vite)
+  Styling:    Tailwind CSS with custom color palette
+  Animation:  Framer Motion + custom hooks
+  Drag/Drop:  @dnd-kit/core + @dnd-kit/sortable (draft board)
+  Data:       Supabase JS client (@supabase/supabase-js)
+  State:      React Context (GameContext) + custom hooks per page
+  Fonts:      Playfair Display, IBM Plex Mono, Libre Baskerville
+
+5.2 Folder Structure
+---------------------
+  src/components/    Reusable UI pieces
+    layout/          Sidebar, TopBar, DetailPanel
+    dashboard/       TimelineBar, InboxItem, StoryFeed, GamePreviewCard
+    roster/          PlayerRow, PlayerCard, AttributeBar, TraitTag
+    game/            GameFeed, KeyMomentCard, ScoreHeader, InterventionPanel
+    draft/           ProspectCard, DraftBoard, ScoutingCard, CombineCard
+    shared/          Button, Badge, Modal, Divider, StatBlock
+    cinematic/       ChampionshipScreen, HOFScreen, AwardReveal
+  src/pages/         One file per screen
+  src/hooks/         All data fetching (23 custom hooks)
+  src/lib/           Business logic — no React, no Supabase calls
+    supabase.js      Client init
+    simEngine.js     Game simulation — win/loss logic
+    tradeEngine.js   calculatePlayerValue, evaluateOffer, generateCounter
+    storyBeats.js    generateStoryBeat, saveStoryBeat
+    devEngine.js     Growth rolls, pathway checks, persona evolution
+    draftEngine.js   Prospect generation, combine reveals, draft order
+    chemistryEngine.js  Pair score updates, team score calculation
+    legacyEngine.js  Legacy points, records, HOF evaluation
+    weeklyTick.js    Full weekly tick orchestration
+  src/context/       GameContext — active season, team, GM profile
+  src/styles/        globals.css — font imports, CSS variables
+
+5.3 Build Order
+----------------
+  1.  supabase.js + GameContext
+  2.  NewGame.jsx — 4-step onboarding
+  3.  Layout shell — Sidebar + TimelineBar + page wrapper
+  4.  Dashboard.jsx — 5 modules wired to real data
+  5.  Roster.jsx + PlayerCard detail panel
+  6.  DevLeague.jsx + pathway assignment
+  7.  GameDay.jsx + simEngine.js — core playable experience
+  8.  DraftBoard.jsx + draftEngine.js
+  9.  TradeMarket.jsx + tradeEngine.js
+  10. Everything else
+
+================================================================================
+6. LEGACY & LONG-TERM PROGRESSION
+================================================================================
+
+6.1 Legacy Score Points
+------------------------
+  Championship win              +500
+  Playoff appearance            +100
+  Award winner on roster        +75
+  Hall of Fame induction        +150
+  Franchise record broken       +25
+  Franchise goal achieved       +200
+  Player developed 60 to 80+    +100
+  Persona evolved positively    +30
+  Missing franchise goal        -100
+  Star forced out via demand    -50
+  Locker room incident unresolved  -25
+  Finished last in league       -75
+  (Score floors at 0 — never goes negative)
+
+6.2 Hall of Fame
+-----------------
+Players need to meet at least 3 of 8 criteria:
+  - 4+ seasons played
+  - 85+ overall at peak
+  - 1+ championship
+  - 1+ individual award
+  - 85+ chemistry bond with teammate
+  - Signature move unlocked
+  - Persona evolved positively
+  - 18+ avg points per season
+
+Induction ceremony: player name, career stats, quirk displayed final time,
+one-sentence legacy line generated from career data.
+
+6.3 Franchise Goal Types
+-------------------------
+  make_playoffs, win_championship, develop_player, reach_record,
+  rebuild, prove_yourself, dynasty
+
+  Hit the goal: +200 legacy. Miss it: -100 legacy. Next season's options
+  reflect the outcome.
+
+================================================================================
+7. SCOPE & PRIORITIES
+================================================================================
+
+7.1 MVP — Must Ship (P0)
+------------------------
+  New game setup flow
+  Roster management + dev league
+  Player persona system (hidden + reveal)
+  Development pathway assignment + weekly growth tick
+  Game simulation — 3 view modes, 5 key moment types
+  Story beat engine with seeded templates
+  Season progression — 24 games, playoffs, awards
+  League-wide sim — all 30 teams tick every week
+  Draft system — scouting, combine, 3 rounds
+  Dashboard with all 5 modules
+  Full Supabase schema deployed
+
+7.2 V1.1 — Ship Soon After (P1)
+---------------------------------
+  Free agency + contract negotiations
+  Trade system with counter loop
+  Offseason flow
+  Signature system
+  GM reputation system
+  Team chemistry pair scores
+  Legacy score accumulation
+  Coaching staff upgrades
+
+7.3 V1.2 — Nice to Have (P2)
+------------------------------
+  Hall of Fame + induction ceremony
+  Franchise records page
+  Season archive
+  Injury system
+  Franchise narrative events (GM-driven arcs)
+  Mobile responsive layout
+
+================================================================================
+8. OPEN QUESTIONS
+================================================================================
+
+  Auth strategy:       Supabase Auth email/password, or anonymous sessions?
+  Multi-save support:  Multiple franchise saves, or one per account?
+  Season length choice: Should player choose 12/24/36 at new game setup?
+  Injury system:       Simple games missed, or full recovery timeline?
+  GM reputation:       Explicit number shown, or felt through AI behavior?
+  Mobile:              When does mobile layout become a priority?
+  Monetization:        Free, one-time purchase, or subscription?
+
+================================================================================
+Hardwood Manager | PRD v1.0 | March 2026
+================================================================================
