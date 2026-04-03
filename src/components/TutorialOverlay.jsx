@@ -6,95 +6,64 @@ const TUTORIAL_STEPS = [
   {
     id: 0,
     title: 'Welcome, GM!',
-    message: 'Let\'s learn how to play Bashketbal! Click the tutorial message below to begin.',
+    message: 'Welcome to Bashketbal! Let me show you around. This is your Priority Inbox - all important news, trades, and updates appear here.',
     targetSelector: '[data-tutorial="inbox"]',
-    tipTitle: 'Priority Inbox',
-    tipText: 'This is where important news, trade offers, and updates appear. Click the highlighted message to continue.',
-    navigateTo: null,
-    requireClick: true,
+    position: 'right',
   },
   {
     id: 1,
-    title: 'Meet Your Team',
-    message: 'Click "Got It!" to navigate to your roster and meet your players!',
+    title: 'Your Roster',
+    message: 'Here\'s your team roster. OVR shows player overall rating. Potential indicates future growth ceiling.',
     targetSelector: '[data-tutorial="player-row"]',
-    tipTitle: 'Your Roster',
-    tipText: 'OVR = Overall rating. Higher means better! Potential shows future growth ceiling.',
-    navigateTo: '/roster',
-    requireClick: true,
+    position: 'right',
   },
   {
     id: 2,
-    title: 'Player Details',
-    message: 'Click any player row to see their full details!',
-    targetSelector: '[data-tutorial="player-row"]',
-    tipTitle: 'Player Card',
-    tipText: 'Dev Pathway shows how players will grow. Focus on high potential players!',
-    navigateTo: null,
-    requireClick: true,
+    title: 'Play Games',
+    message: 'When ready, head to Game Day to play. Make smart decisions during games to win!',
+    targetSelector: '[data-tutorial="play-button"]',
+    position: 'right',
   },
   {
     id: 3,
-    title: 'Time to Play!',
-    message: 'Click "Got It!" to head to Game Day and play your first game!',
-    targetSelector: '[data-tutorial="play-button"]',
-    tipTitle: 'Game Day',
-    tipText: 'Click PLAY GAME to simulate. Make smart decisions to win!',
-    navigateTo: '/game-day',
-    requireClick: false,
+    title: 'Trade Market',
+    message: 'Improve your team through trades. Swap players and draft picks to build a championship roster.',
+    targetSelector: '[data-tutorial="new-trade"]',
+    position: 'right',
   },
   {
     id: 4,
-    title: 'Build Your Dynasty',
-    message: 'Click "Got It!" to visit the Trade Market!',
-    targetSelector: '[data-tutorial="new-trade"]',
-    tipTitle: 'Trade Market',
-    tipText: 'Swap players and draft picks to build a championship team.',
-    navigateTo: '/trade-market',
-    requireClick: false,
-  },
-  {
-    id: 5,
-    title: 'Scouting Stars',
-    message: 'Click "Got It!" to go to Scouting and scout your future stars!',
+    title: 'Scouting',
+    message: 'Scout draft prospects to learn about future stars. Assign scouts to reveal their skills!',
     targetSelector: '[data-tutorial="scouts"]',
-    tipTitle: 'Scouting',
-    tipText: 'Assign scouts to learn about draft prospects. Better scouts = better intel!',
-    navigateTo: '/scouting',
-    requireClick: false,
+    position: 'left',
   },
 ]
 
 export default function TutorialOverlay({ tutorialState, onComplete, onSkip }) {
   const navigate = useNavigate()
-  const [showOverlay, setShowOverlay] = useState(false)
+  const [currentStep, setCurrentStep] = useState(0)
   const [targetRect, setTargetRect] = useState(null)
-  const [stepReady, setStepReady] = useState(false)
-  const overlayRef = useRef(null)
+  const [showCelebration, setShowCelebration] = useState(false)
 
-  const currentStep = tutorialState?.currentStep ?? 0
-  const isCompleted = tutorialState?.completed || false
-  const isSkipped = tutorialState?.skipped || false
+  const tutorialCompleted = tutorialState?.completed || false
+  const tutorialSkipped = tutorialState?.skipped || false
+  const actualStep = tutorialState?.currentStep ?? 0
 
   useEffect(() => {
-    if (isCompleted || isSkipped) {
-      setShowOverlay(false)
+    if (tutorialCompleted || tutorialSkipped) {
+      setShowCelebration(false)
       return
     }
 
-    if (currentStep >= TUTORIAL_STEPS.length) {
-      onComplete?.()
+    if (actualStep >= TUTORIAL_STEPS.length) {
+      setShowCelebration(true)
       return
     }
 
-    setStepReady(false)
-    const timer = setTimeout(() => {
-      setShowOverlay(true)
-      updateTargetPosition()
-    }, 1000)
-
-    return () => clearTimeout(timer)
-  }, [currentStep, isCompleted, isSkipped])
+    setCurrentStep(actualStep)
+    updateTargetPosition()
+  }, [actualStep, tutorialCompleted, tutorialSkipped])
 
   const updateTargetPosition = () => {
     const step = TUTORIAL_STEPS[currentStep]
@@ -104,177 +73,264 @@ export default function TutorialOverlay({ tutorialState, onComplete, onSkip }) {
     if (element) {
       const rect = element.getBoundingClientRect()
       setTargetRect(rect)
-      setStepReady(true)
-    } else {
-      setStepReady(false)
     }
   }
 
-  const handleNextStep = useCallback(() => {
-    const step = TUTORIAL_STEPS[currentStep]
-    if (step?.navigateTo) {
-      navigate(step.navigateTo)
-      setTimeout(() => {
-        onComplete?.()
-      }, 800)
+  const handleNext = useCallback(() => {
+    if (currentStep === TUTORIAL_STEPS.length - 1) {
+      setShowCelebration(true)
     } else {
-      onComplete?.()
+      const step = TUTORIAL_STEPS[currentStep + 1]
+      if (step?.navigateTo) {
+        navigate(step.navigateTo)
+        setTimeout(() => {
+          onComplete?.()
+        }, 600)
+      } else {
+        onComplete?.()
+      }
     }
   }, [currentStep, navigate, onComplete])
+
+  const handleFinishTutorial = useCallback(() => {
+    onComplete?.()
+  }, [onComplete])
 
   const handleSkip = useCallback(() => {
     onSkip?.()
   }, [onSkip])
 
-  if (!showOverlay || isCompleted || isSkipped) return null
+  if (tutorialCompleted || tutorialSkipped) return null
+
+  if (showCelebration) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6"
+      >
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', damping: 15 }}
+          className="bg-ink border-2 border-gold rounded-2xl p-10 max-w-lg text-center"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.3, type: 'spring', damping: 10 }}
+            className="text-8xl mb-6"
+          >
+            🏆
+          </motion.div>
+          
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="font-display text-4xl text-gold mb-4"
+          >
+            You're Ready, GM!
+          </motion.h2>
+          
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="font-mono text-cream/80 mb-8"
+          >
+            You've completed the tutorial! Your journey to build a dynasty begins now.
+            Good luck, and remember - every championship starts with a single decision!
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9 }}
+            className="flex flex-col gap-3"
+          >
+            <button
+              onClick={handleFinishTutorial}
+              className="w-full py-4 bg-gold text-stadium font-mono text-lg uppercase tracking-wider rounded-lg hover:bg-gold/90 transition-colors font-bold"
+            >
+              Start Your Dynasty! 🏀
+            </button>
+            <p className="text-xs text-muted font-mono">
+              You can always replay the tutorial from the dashboard.
+            </p>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+    )
+  }
 
   const step = TUTORIAL_STEPS[currentStep]
-  if (!step) return null
+  if (!step || !targetRect) return null
 
-  const isLastStep = currentStep === TUTORIAL_STEPS.length - 1
+  const isLeft = step.position === 'left'
+  const cardWidth = 380
+  const cardHeight = 320
+
+  let cardLeft, cardTop
+  if (isLeft) {
+    cardLeft = targetRect.left - cardWidth - 30
+    if (cardLeft < 20) cardLeft = targetRect.right + 30
+  } else {
+    cardLeft = targetRect.right + 30
+    if (cardLeft + cardWidth > window.innerWidth - 20) {
+      cardLeft = targetRect.left - cardWidth - 30
+    }
+  }
+
+  cardTop = Math.max(20, Math.min(
+    targetRect.top + targetRect.height / 2 - cardHeight / 2,
+    window.innerHeight - cardHeight - 20
+  ))
 
   return (
     <>
-      {/* Full blocking overlay with cutout for target */}
-      <div 
-        ref={overlayRef}
-        className="fixed inset-0 z-40"
-        style={{
-          background: targetRect 
-            ? `radial-gradient(
-                circle at ${targetRect.left + targetRect.width/2}px ${targetRect.top + targetRect.height/2}px, 
-                transparent ${Math.max(targetRect.width, targetRect.height) + 80}px, 
-                rgba(0,0,0,0.75) ${Math.max(targetRect.width, targetRect.height) + 100}px
-              )`
-            : 'rgba(0,0,0,0.75)',
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Pulsing border around target */}
-      {targetRect && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ 
-            opacity: [0.8, 1, 0.8],
-            scale: [1, 1.02, 1],
-          }}
-          transition={{ 
-            opacity: { duration: 1.5, repeat: Infinity },
-            scale: { duration: 1.5, repeat: Infinity },
-          }}
-          className="fixed z-50 border-4 border-gold rounded-lg pointer-events-none"
-          style={{
-            left: targetRect.left - 8,
-            top: targetRect.top - 8,
-            width: targetRect.width + 16,
-            height: targetRect.height + 16,
-            boxShadow: '0 0 20px rgba(200, 150, 58, 0.5), inset 0 0 20px rgba(200, 150, 58, 0.2)',
-          }}
-        />
-      )}
-
-      {/* Tutorial message box */}
+      {/* Subtle spotlight on target */}
       <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.9 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] max-w-lg w-[92%]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="fixed z-40 pointer-events-none"
+        style={{
+          left: targetRect.left - 12,
+          top: targetRect.top - 12,
+          width: targetRect.width + 24,
+          height: targetRect.height + 24,
+        }}
       >
-        <div className="bg-ink border-2 border-gold rounded-xl p-6 shadow-2xl">
-          <div className="flex items-start gap-4 mb-4">
-            <motion.div 
-              className="w-12 h-12 bg-gold/20 rounded-full flex items-center justify-center text-gold text-2xl"
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 1, repeat: Infinity }}
-            >
-              🎓
-            </motion.div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-display text-xl text-gold">
-                  {step.title}
-                </h3>
-                <span className="text-xs text-muted font-mono">
-                  {currentStep + 1}/{TUTORIAL_STEPS.length}
-                </span>
-              </div>
-              <p className="font-mono text-sm text-cream/80">
-                {step.message}
-              </p>
-            </div>
-          </div>
-          
-          {/* Tip box */}
-          <div className="bg-stadium/60 rounded-lg p-4 mb-5 border border-gold/30">
-            <p className="font-mono text-xs text-gold uppercase tracking-wider mb-2 flex items-center gap-2">
-              <span>💡</span> {step.tipTitle}
-            </p>
-            <p className="font-mono text-sm text-cream/70">
-              {step.tipText}
-            </p>
-          </div>
-
-          {/* Progress dots */}
-          <div className="flex justify-center gap-2 mb-5">
-            {TUTORIAL_STEPS.map((_, i) => (
-              <div
-                key={i}
-                className={`h-2 rounded-full transition-all ${
-                  i === currentStep 
-                    ? 'w-6 bg-gold' 
-                    : i < currentStep 
-                      ? 'w-2 bg-gold/50' 
-                      : 'w-2 bg-muted/40'
-                }`}
-              />
-            ))}
-          </div>
-          
-          <div className="flex gap-3">
-            <button
-              onClick={handleSkip}
-              className="px-4 py-2.5 text-muted font-mono text-sm hover:text-cream transition-colors border border-muted/30 rounded hover:border-muted/60"
-            >
-              Skip Tutorial
-            </button>
-            <motion.button
-              onClick={handleNextStep}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex-1 py-2.5 bg-gold text-stadium font-mono text-sm uppercase tracking-wider rounded-lg hover:bg-gold/90 transition-colors font-bold"
-            >
-              {isLastStep ? '🎉 Finish Tutorial!' : 'Got It! →'}
-            </motion.button>
-          </div>
-        </div>
+        <motion.div
+          animate={{ 
+            boxShadow: [
+              '0 0 20px 5px rgba(200, 150, 58, 0.3)',
+              '0 0 30px 10px rgba(200, 150, 58, 0.5)',
+              '0 0 20px 5px rgba(200, 150, 58, 0.3)',
+            ],
+          }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="w-full h-full border-2 border-gold rounded-lg"
+        />
       </motion.div>
 
-      {/* Floating instruction arrow pointing to target */}
-      {targetRect && (
+      {/* Connector line */}
+      <svg className="fixed inset-0 z-40 pointer-events-none" style={{ overflow: 'visible' }}>
+        <motion.line
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          x1={isLeft ? cardLeft + cardWidth : cardLeft}
+          y1={cardTop + 80}
+          x2={targetRect.left - 20}
+          y2={targetRect.top + targetRect.height / 2}
+          stroke="#C8963A"
+          strokeWidth="2"
+          strokeDasharray="5,5"
+        />
+        <circle
+          cx={targetRect.left - 20}
+          cy={targetRect.top + targetRect.height / 2}
+          r="6"
+          fill="#C8963A"
+        />
+      </svg>
+
+      {/* Tutorial card */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, x: isLeft ? -20 : 20 }}
+        animate={{ opacity: 1, scale: 1, x: 0 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ type: 'spring', damping: 20 }}
+        className="fixed z-[60] w-[380px]"
+        style={{
+          left: cardLeft,
+          top: cardTop,
+        }}
+      >
+        <div className="bg-ink border-2 border-gold rounded-xl shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-gold/20 to-rust/10 p-4 border-b border-gold/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 1, repeat: Infinity, repeatDelay: 3 }}
+                  className="text-2xl"
+                >
+                  🎓
+                </motion.div>
+                <span className="text-xs text-gold font-mono uppercase tracking-wider">
+                  Tutorial
+                </span>
+              </div>
+              <span className="text-xs text-muted font-mono">
+                {currentStep + 1} / {TUTORIAL_STEPS.length}
+              </span>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-5">
+            <h3 className="font-display text-xl text-cream mb-3">
+              {step.title}
+            </h3>
+            <p className="font-mono text-sm text-cream/80 leading-relaxed mb-6">
+              {step.message}
+            </p>
+
+            {/* Progress dots */}
+            <div className="flex justify-center gap-2 mb-5">
+              {TUTORIAL_STEPS.map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={false}
+                  animate={{
+                    width: i === currentStep ? 24 : 8,
+                    backgroundColor: i <= currentStep ? '#C8963A' : '#4A4540',
+                  }}
+                  transition={{ duration: 0.3 }}
+                  className="h-2 rounded-full"
+                />
+              ))}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleSkip}
+                className="px-4 py-2.5 text-muted font-mono text-sm hover:text-cream transition-colors"
+              >
+                Skip
+              </button>
+              <motion.button
+                onClick={handleNext}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex-1 py-2.5 bg-gold text-stadium font-mono text-sm uppercase tracking-wider rounded-lg hover:bg-gold/90 transition-colors font-bold"
+              >
+                {currentStep === TUTORIAL_STEPS.length - 1 ? 'Finish 🎉' : 'Next →'}
+              </motion.button>
+            </div>
+          </div>
+        </div>
+
+        {/* Arrow pointing to target */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.5 }}
-          className="fixed z-[55] pointer-events-none"
-          style={{
-            left: targetRect.left + targetRect.width + 20,
-            top: targetRect.top + targetRect.height / 2,
-            transform: 'translateY(-50%)',
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, x: [0, 5, 0] }}
+          transition={{ delay: 0.5, duration: 1, repeat: Infinity }}
+          className="absolute top-1/2 -translate-y-1/2 text-gold text-2xl"
+          style={{ 
+            left: isLeft ? '100%' : 'auto', 
+            right: isLeft ? 'auto' : '100%',
+            transform: 'translateY(-50%) rotate(180deg)'
           }}
         >
-          <motion.div
-            animate={{ x: [0, 10, 0] }}
-            transition={{ duration: 1, repeat: Infinity }}
-            className="flex items-center gap-2"
-          >
-            <span className="text-gold font-mono text-sm bg-ink/90 px-2 py-1 rounded border border-gold/50">
-              Click here
-            </span>
-            <span className="text-2xl">👈</span>
-          </motion.div>
+          ◀
         </motion.div>
-      )}
+      </motion.div>
     </>
   )
 }
