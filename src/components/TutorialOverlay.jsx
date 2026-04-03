@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 
@@ -6,66 +6,71 @@ const TUTORIAL_STEPS = [
   {
     id: 0,
     title: 'Welcome, GM!',
-    message: 'Click this message to start learning how to play.',
+    message: 'Let\'s learn how to play Bashketbal! Click the tutorial message below to begin.',
     targetSelector: '[data-tutorial="inbox"]',
     tipTitle: 'Priority Inbox',
-    tipText: 'This is where important news, trade offers, and updates appear.',
+    tipText: 'This is where important news, trade offers, and updates appear. Click the highlighted message to continue.',
     navigateTo: null,
+    requireClick: true,
   },
   {
     id: 1,
     title: 'Meet Your Team',
-    message: 'Let\'s check out your roster! Players are the heart of your franchise.',
+    message: 'Click "Got It!" to navigate to your roster and meet your players!',
     targetSelector: '[data-tutorial="player-row"]',
     tipTitle: 'Your Roster',
     tipText: 'OVR = Overall rating. Higher means better! Potential shows future growth ceiling.',
     navigateTo: '/roster',
+    requireClick: true,
   },
   {
     id: 2,
     title: 'Player Details',
-    message: 'Click any player to see their full profile. Notice their attributes!',
-    targetSelector: '[data-tutorial="player-detail"]',
+    message: 'Click any player row to see their full details!',
+    targetSelector: '[data-tutorial="player-row"]',
     tipTitle: 'Player Card',
     tipText: 'Dev Pathway shows how players will grow. Focus on high potential players!',
-    navigateTo: '/roster',
+    navigateTo: null,
+    requireClick: true,
   },
   {
     id: 3,
     title: 'Time to Play!',
-    message: 'Let\'s simulate your first game! Make key decisions during gameplay.',
+    message: 'Click "Got It!" to head to Game Day and play your first game!',
     targetSelector: '[data-tutorial="play-button"]',
     tipTitle: 'Game Day',
     tipText: 'Click PLAY GAME to simulate. Make smart decisions to win!',
     navigateTo: '/game-day',
+    requireClick: false,
   },
   {
     id: 4,
     title: 'Build Your Dynasty',
-    message: 'Trades are how you improve your team. Let\'s learn the trade market.',
+    message: 'Click "Got It!" to visit the Trade Market!',
     targetSelector: '[data-tutorial="new-trade"]',
     tipTitle: 'Trade Market',
     tipText: 'Swap players and draft picks to build a championship team.',
     navigateTo: '/trade-market',
+    requireClick: false,
   },
   {
     id: 5,
     title: 'Scouting Stars',
-    message: 'The draft is where legends are born. Scout prospects for your future!',
+    message: 'Click "Got It!" to go to Scouting and scout your future stars!',
     targetSelector: '[data-tutorial="scouts"]',
     tipTitle: 'Scouting',
     tipText: 'Assign scouts to learn about draft prospects. Better scouts = better intel!',
     navigateTo: '/scouting',
+    requireClick: false,
   },
 ]
 
 export default function TutorialOverlay({ tutorialState, onComplete, onSkip }) {
+  const navigate = useNavigate()
   const [showOverlay, setShowOverlay] = useState(false)
-  const [arrowPosition, setArrowPosition] = useState({ x: 0, y: 0 })
   const [targetRect, setTargetRect] = useState(null)
-  const [lineLength, setLineLength] = useState(0)
-  const canvasRef = useRef(null)
-  const animationRef = useRef(null)
+  const [stepReady, setStepReady] = useState(false)
+  const overlayRef = useRef(null)
 
   const currentStep = tutorialState?.currentStep ?? 0
   const isCompleted = tutorialState?.completed || false
@@ -82,6 +87,7 @@ export default function TutorialOverlay({ tutorialState, onComplete, onSkip }) {
       return
     }
 
+    setStepReady(false)
     const timer = setTimeout(() => {
       setShowOverlay(true)
       updateTargetPosition()
@@ -98,135 +104,101 @@ export default function TutorialOverlay({ tutorialState, onComplete, onSkip }) {
     if (element) {
       const rect = element.getBoundingClientRect()
       setTargetRect(rect)
-      
-      const mailElement = document.querySelector('[data-tutorial="inbox"]')
-      if (mailElement) {
-        const mailRect = mailElement.getBoundingClientRect()
-        const startX = mailRect.right
-        const startY = mailRect.top + mailRect.height / 2
-        const endX = rect.left
-        const endY = rect.top + rect.height / 2
-        
-        setArrowPosition({ x: startX, y: startY, endX, endY })
-        
-        const distance = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2))
-        animateLine(distance)
-      }
+      setStepReady(true)
+    } else {
+      setStepReady(false)
     }
   }
 
-  const animateLine = (totalLength) => {
-    let progress = 0
-    const duration = 800
-    const startTime = Date.now()
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime
-      progress = Math.min(elapsed / duration, 1)
-      
-      setLineLength(progress * totalLength)
-      
-      if (progress < 1) {
-        animationRef.current = requestAnimationFrame(animate)
-      }
+  const handleNextStep = useCallback(() => {
+    const step = TUTORIAL_STEPS[currentStep]
+    if (step?.navigateTo) {
+      navigate(step.navigateTo)
+      setTimeout(() => {
+        onComplete?.()
+      }, 800)
+    } else {
+      onComplete?.()
     }
-    
-    animate()
-  }
+  }, [currentStep, navigate, onComplete])
 
-  const handleNextStep = () => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current)
-    }
-    onComplete?.()
-  }
-
-  const handleSkip = () => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current)
-    }
+  const handleSkip = useCallback(() => {
     onSkip?.()
-  }
+  }, [onSkip])
 
   if (!showOverlay || isCompleted || isSkipped) return null
 
   const step = TUTORIAL_STEPS[currentStep]
   if (!step) return null
 
+  const isLastStep = currentStep === TUTORIAL_STEPS.length - 1
+
   return (
     <>
-      {/* Dark overlay */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 z-40 pointer-events-none"
+      {/* Full blocking overlay with cutout for target */}
+      <div 
+        ref={overlayRef}
+        className="fixed inset-0 z-40"
+        style={{
+          background: targetRect 
+            ? `radial-gradient(
+                circle at ${targetRect.left + targetRect.width/2}px ${targetRect.top + targetRect.height/2}px, 
+                transparent ${Math.max(targetRect.width, targetRect.height) + 80}px, 
+                rgba(0,0,0,0.75) ${Math.max(targetRect.width, targetRect.height) + 100}px
+              )`
+            : 'rgba(0,0,0,0.75)',
+          pointerEvents: 'none',
+        }}
       />
 
-      {/* Drawing arrow line */}
-      <svg
-        ref={canvasRef}
-        className="fixed inset-0 z-50 pointer-events-none"
-        style={{ overflow: 'visible' }}
-      >
-        <defs>
-          <linearGradient id="arrowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#C8963A" />
-            <stop offset="100%" stopColor="#FF8C42" />
-          </linearGradient>
-          <filter id="arrowGlow">
-            <feGaussianBlur stdDeviation="3" result="glow" />
-            <feMerge>
-              <feMergeNode in="glow" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        
-        {/* Animated line */}
-        <AnimatedLine
-          startX={arrowPosition.x}
-          startY={arrowPosition.y}
-          endX={arrowPosition.endX}
-          endY={arrowPosition.endY}
-          progress={lineLength}
+      {/* Pulsing border around target */}
+      {targetRect && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ 
+            opacity: [0.8, 1, 0.8],
+            scale: [1, 1.02, 1],
+          }}
+          transition={{ 
+            opacity: { duration: 1.5, repeat: Infinity },
+            scale: { duration: 1.5, repeat: Infinity },
+          }}
+          className="fixed z-50 border-4 border-gold rounded-lg pointer-events-none"
+          style={{
+            left: targetRect.left - 8,
+            top: targetRect.top - 8,
+            width: targetRect.width + 16,
+            height: targetRect.height + 16,
+            boxShadow: '0 0 20px rgba(200, 150, 58, 0.5), inset 0 0 20px rgba(200, 150, 58, 0.2)',
+          }}
         />
-
-        {/* Arrow head */}
-        {lineLength > 50 && (
-          <motion.g
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              transformOrigin: `${arrowPosition.endX}px ${arrowPosition.endY}px`,
-            }}
-          >
-            <polygon
-              points={`${arrowPosition.endX},${arrowPosition.endY} ${arrowPosition.endX - 12},${arrowPosition.endY - 8} ${arrowPosition.endX - 12},${arrowPosition.endY + 8}`}
-              fill="url(#arrowGradient)"
-              filter="url(#arrowGlow)"
-            />
-          </motion.g>
-        )}
-      </svg>
+      )}
 
       {/* Tutorial message box */}
       <motion.div
-        initial={{ opacity: 0, y: 20, scale: 0.9 }}
+        initial={{ opacity: 0, y: 30, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 max-w-md w-[90%]"
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] max-w-lg w-[92%]"
       >
         <div className="bg-ink border-2 border-gold rounded-xl p-6 shadow-2xl">
           <div className="flex items-start gap-4 mb-4">
-            <div className="w-10 h-10 bg-gold/20 rounded-full flex items-center justify-center text-gold text-xl">
+            <motion.div 
+              className="w-12 h-12 bg-gold/20 rounded-full flex items-center justify-center text-gold text-2xl"
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 1, repeat: Infinity }}
+            >
               🎓
-            </div>
+            </motion.div>
             <div className="flex-1">
-              <h3 className="font-display text-xl text-gold mb-1">
-                {step.title}
-              </h3>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-display text-xl text-gold">
+                  {step.title}
+                </h3>
+                <span className="text-xs text-muted font-mono">
+                  {currentStep + 1}/{TUTORIAL_STEPS.length}
+                </span>
+              </div>
               <p className="font-mono text-sm text-cream/80">
                 {step.message}
               </p>
@@ -234,70 +206,75 @@ export default function TutorialOverlay({ tutorialState, onComplete, onSkip }) {
           </div>
           
           {/* Tip box */}
-          <div className="bg-stadium/50 rounded-lg p-4 mb-4 border border-gold/30">
-            <p className="font-mono text-xs text-gold uppercase tracking-wider mb-1">
-              {step.tipTitle}
+          <div className="bg-stadium/60 rounded-lg p-4 mb-5 border border-gold/30">
+            <p className="font-mono text-xs text-gold uppercase tracking-wider mb-2 flex items-center gap-2">
+              <span>💡</span> {step.tipTitle}
             </p>
             <p className="font-mono text-sm text-cream/70">
               {step.tipText}
             </p>
           </div>
+
+          {/* Progress dots */}
+          <div className="flex justify-center gap-2 mb-5">
+            {TUTORIAL_STEPS.map((_, i) => (
+              <div
+                key={i}
+                className={`h-2 rounded-full transition-all ${
+                  i === currentStep 
+                    ? 'w-6 bg-gold' 
+                    : i < currentStep 
+                      ? 'w-2 bg-gold/50' 
+                      : 'w-2 bg-muted/40'
+                }`}
+              />
+            ))}
+          </div>
           
           <div className="flex gap-3">
             <button
               onClick={handleSkip}
-              className="px-4 py-2 text-muted font-mono text-sm hover:text-cream transition-colors"
+              className="px-4 py-2.5 text-muted font-mono text-sm hover:text-cream transition-colors border border-muted/30 rounded hover:border-muted/60"
             >
               Skip Tutorial
             </button>
-            <button
+            <motion.button
               onClick={handleNextStep}
-              className="flex-1 py-2 bg-gold text-stadium font-mono text-sm uppercase tracking-wider rounded-lg hover:bg-gold/90 transition-colors"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex-1 py-2.5 bg-gold text-stadium font-mono text-sm uppercase tracking-wider rounded-lg hover:bg-gold/90 transition-colors font-bold"
             >
-              {currentStep === TUTORIAL_STEPS.length - 1 ? 'Finish Tutorial' : 'Got It!'}
-            </button>
+              {isLastStep ? '🎉 Finish Tutorial!' : 'Got It! →'}
+            </motion.button>
           </div>
         </div>
       </motion.div>
-    </>
-  )
-}
 
-function AnimatedLine({ startX, startY, endX, endY, progress }) {
-  const dx = endX - startX
-  const dy = endY - startY
-  const distance = Math.sqrt(dx * dx + dy * dy)
-  const currentLength = Math.min(progress, distance)
-  
-  if (currentLength <= 0) return null
-
-  const ratio = currentLength / distance
-  const currentX = startX + dx * ratio
-  const currentY = startY + dy * ratio
-
-  return (
-    <>
-      {/* Glow effect */}
-      <motion.line
-        x1={startX}
-        y1={startY}
-        x2={currentX}
-        y2={currentY}
-        stroke="rgba(200, 150, 58, 0.3)"
-        strokeWidth="8"
-        strokeLinecap="round"
-        filter="url(#arrowGlow)"
-      />
-      {/* Main line */}
-      <motion.line
-        x1={startX}
-        y1={startY}
-        x2={currentX}
-        y2={currentY}
-        stroke="url(#arrowGradient)"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
+      {/* Floating instruction arrow pointing to target */}
+      {targetRect && (
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5 }}
+          className="fixed z-[55] pointer-events-none"
+          style={{
+            left: targetRect.left + targetRect.width + 20,
+            top: targetRect.top + targetRect.height / 2,
+            transform: 'translateY(-50%)',
+          }}
+        >
+          <motion.div
+            animate={{ x: [0, 10, 0] }}
+            transition={{ duration: 1, repeat: Infinity }}
+            className="flex items-center gap-2"
+          >
+            <span className="text-gold font-mono text-sm bg-ink/90 px-2 py-1 rounded border border-gold/50">
+              Click here
+            </span>
+            <span className="text-2xl">👈</span>
+          </motion.div>
+        </motion.div>
+      )}
     </>
   )
 }

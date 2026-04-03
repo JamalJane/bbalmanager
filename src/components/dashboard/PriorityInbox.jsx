@@ -36,15 +36,7 @@ export default function PriorityInbox() {
 
   const handleTutorialClick = (item) => {
     if (item.isTutorial) {
-      const step = tutorialSteps[item.tutorialStep]
-      if (step?.navigateTo) {
-        markInboxRead(item.id)
-        navigate(step.navigateTo)
-        setTimeout(() => advanceTutorial(), 500)
-      } else {
-        markInboxRead(item.id)
-        advanceTutorial()
-      }
+      advanceTutorial()
     } else {
       markInboxRead(item.id)
     }
@@ -89,7 +81,7 @@ export default function PriorityInbox() {
               onClick={() => handleTutorialClick(item)}
               className={`p-3 bg-stadium border cursor-pointer transition-colors hover:border-rust/50 ${
                 item.isNew && !item.isTutorial ? 'border-l-2 border-l-rust' : ''
-              } ${item.isTutorial ? 'border-gold/50 border-2 border-dashed' : 'border-muted/20'}`}
+              } ${item.isTutorial ? 'border-gold/50 border-2 border-dashed animate-pulse' : 'border-muted/20'}`}
             >
               <div className="flex items-start gap-3">
                 <span className={`${item.isTutorial ? 'text-gold' : categoryColors[item.category]} text-lg`}>
