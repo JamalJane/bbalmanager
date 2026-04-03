@@ -174,7 +174,7 @@ export function GameProvider({ children }) {
   const advanceTutorial = useCallback(() => {
     setGameState(prev => {
       const nextStep = prev.tutorial.currentStep + 1
-      if (nextStep >= 6) {
+      if (nextStep >= 5) {
         return {
           ...prev,
           inbox: prev.inbox.filter(item => !item.isTutorial),

@@ -6,37 +6,41 @@ const TUTORIAL_STEPS = [
   {
     id: 0,
     title: 'Welcome, GM!',
-    message: 'Welcome to Bashketbal! Let me show you around. This is your Priority Inbox - all important news, trades, and updates appear here.',
+    message: 'Welcome to Bashketbal! Let me show you around. Click "Next" to learn about your Priority Inbox.',
     targetSelector: '[data-tutorial="inbox"]',
     position: 'right',
   },
   {
     id: 1,
     title: 'Your Roster',
-    message: 'Here\'s your team roster. OVR shows player overall rating. Potential indicates future growth ceiling.',
+    message: 'Here\'s your team roster. OVR shows player overall rating. Potential indicates future growth ceiling. Click "Next" to head to your roster.',
     targetSelector: '[data-tutorial="player-row"]',
     position: 'right',
+    navigateTo: '/roster',
   },
   {
     id: 2,
     title: 'Play Games',
-    message: 'When ready, head to Game Day to play. Make smart decisions during games to win!',
+    message: 'When ready, head to Game Day to play. Choose your speed, make decisions, and win games! Click "Next" to go to Game Day.',
     targetSelector: '[data-tutorial="play-button"]',
     position: 'right',
+    navigateTo: '/game-day',
   },
   {
     id: 3,
     title: 'Trade Market',
-    message: 'Improve your team through trades. Swap players and draft picks to build a championship roster.',
+    message: 'Improve your team through trades. Swap players and draft picks to build a championship roster. Click "Next" to visit the Trade Market.',
     targetSelector: '[data-tutorial="new-trade"]',
     position: 'right',
+    navigateTo: '/trade-market',
   },
   {
     id: 4,
     title: 'Scouting',
-    message: 'Scout draft prospects to learn about future stars. Assign scouts to reveal their skills!',
+    message: 'Scout draft prospects to learn about future stars. Assign scouts to reveal their skills! You\'re ready to build your dynasty!',
     targetSelector: '[data-tutorial="scouts"]',
     position: 'left',
+    navigateTo: '/scouting',
   },
 ]
 
@@ -62,8 +66,28 @@ export default function TutorialOverlay({ tutorialState, onComplete, onSkip }) {
     }
 
     setCurrentStep(actualStep)
-    updateTargetPosition()
+    
+    const timer = setTimeout(() => {
+      updateTargetPosition()
+    }, 300)
+    
+    return () => clearTimeout(timer)
   }, [actualStep, tutorialCompleted, tutorialSkipped])
+  
+  useEffect(() => {
+    const handleResize = () => {
+      updateTargetPosition()
+    }
+    const handleScroll = () => {
+      updateTargetPosition()
+    }
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('scroll', handleScroll)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('scroll', handleScroll)
+    }
+  }, [currentStep])
 
   const updateTargetPosition = () => {
     const step = TUTORIAL_STEPS[currentStep]
@@ -79,13 +103,14 @@ export default function TutorialOverlay({ tutorialState, onComplete, onSkip }) {
   const handleNext = useCallback(() => {
     if (currentStep === TUTORIAL_STEPS.length - 1) {
       setShowCelebration(true)
+      onComplete?.()
     } else {
-      const step = TUTORIAL_STEPS[currentStep + 1]
-      if (step?.navigateTo) {
-        navigate(step.navigateTo)
+      const currentStepData = TUTORIAL_STEPS[currentStep]
+      if (currentStepData?.navigateTo) {
+        navigate(currentStepData.navigateTo)
         setTimeout(() => {
           onComplete?.()
-        }, 600)
+        }, 800)
       } else {
         onComplete?.()
       }
