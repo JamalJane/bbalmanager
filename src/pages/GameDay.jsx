@@ -1,19 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
-import { useRoster } from '../hooks';
-import { useCountUp, useTypewriter } from '../hooks';
+import { useRoster, useCoachingStaff } from '../hooks';
+import { useCountUp } from '../hooks';
 import PageHeader from '../components/PageHeader';
-import { simGame, applyGMIntervention, generateKeyMoments } from '../lib/simEngine';
+import { 
+  simPossessions, 
+  GAME_SPEEDS, 
+  PLAYBOOK_CALLS, 
+  getPlaybookForCoach,
+  applyGMIntervention,
+  checkAutoTimeoutNeeded 
+} from '../lib/simEngine';
 import { supabase } from '../lib/supabase';
-
-const INTERVENTION_TYPES = [
-  { id: 'substitution', label: 'Substitution', description: 'Fresh player for next 3 possessions', icon: '↻' },
-  { id: 'timeout', label: 'Timeout', description: 'Reset opponent momentum', icon: '⏸' },
-  { id: 'play_call', label: 'Play Call', description: 'Focus offense through top player (1.08x)', icon: '🎯' },
-  { id: 'double_team', label: 'Double Team', description: 'Reduce opponent clutch probability by 40%', icon: '👥' }
-];
 
 function buildTeamObj(team, roster) {
   const starters = (roster || [])
@@ -27,100 +27,280 @@ function buildTeamObj(team, roster) {
     ...team,
     starters,
     bench,
-    chemistry: 50, // Default chemistry value
+    chemistry: 50,
     coaches: [],
   };
 }
 
-function PlayByPlayItem({ moment, index }) {
-  const isKey = moment.is_key_moment;
-  const isClutch = moment.event_type === 'clutch_moment';
-  const isInjury = moment.event_type === 'injury_scare';
+function MomentumMeter({ momentum }) {
+  const normalizedMomentum = Math.max(-5, Math.min(5, momentum));
+  const percentage = ((normalizedMomentum + 5) / 10) * 100;
+  
+  return (
+    <div className="bg-stadium rounded-lg p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-mono text-muted uppercase">Momentum</span>
+        <span className={`text-sm font-mono ${normalizedMomentum > 0 ? 'text-ember' : normalizedMomentum < 0 ? 'text-gold' : 'text-muted'}`}>
+          {normalizedMomentum > 0 ? `Opponent +${normalizedMomentum}` : normalizedMomentum < 0 ? `You +${Math.abs(normalizedMomentum)}` : 'Neutral'}
+        </span>
+      </div>
+      <div className="relative h-3 bg-ink rounded-full overflow-hidden">
+        <div className="absolute left-0 top-0 h-full w-1/2 bg-muted/30" />
+        <motion.div
+          initial={false}
+          animate={{ width: `${percentage}%` }}
+          transition={{ type: 'spring', damping: 20 }}
+          className={`absolute top-0 h-full ${
+            normalizedMomentum > 0 
+              ? 'right-1/2 bg-ember' 
+              : normalizedMomentum < 0 
+                ? 'left-1/2 bg-gold' 
+                : 'left-1/2 bg-muted w-1/2'
+          }`}
+        />
+        <div className="absolute left-1/2 top-0 h-full w-0.5 bg-cream/50 -translate-x-1/2" />
+      </div>
+      <div className="flex justify-between mt-1">
+        <span className="text-[10px] text-muted/60 font-mono">Your Run</span>
+        <span className="text-[10px] text-muted/60 font-mono">Opponent Run</span>
+      </div>
+    </div>
+  );
+}
 
+function SpeedSelector({ selected, onSelect }) {
+  return (
+    <div className="flex gap-2">
+      {Object.entries(GAME_SPEEDS).map(([key, speed]) => (
+        <button
+          key={key}
+          onClick={() => onSelect(key)}
+          className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
+            selected === key
+              ? 'bg-gold text-stadium'
+              : 'bg-stadium text-muted hover:text-cream border border-muted/30'
+          }`}
+        >
+          {speed.label} ⚡
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PlaybookPanel({ coachSpecialty, onPlayCall, currentPlay, disabled }) {
+  const plays = getPlaybookForCoach(coachSpecialty);
+  
+  if (plays.length === 0) {
+    return (
+      <div className="bg-stadium rounded-lg p-4">
+        <p className="text-xs text-muted/60 font-mono mb-3">Playbook</p>
+        <p className="text-sm text-muted font-mono">Hire a coach to unlock playbook calls</p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="bg-stadium rounded-lg p-4">
+      <p className="text-xs text-muted/60 font-mono mb-3">Playbook</p>
+      <div className="flex flex-wrap gap-2">
+        {plays.map(play => (
+          <button
+            key={play.id}
+            onClick={() => onPlayCall(play)}
+            disabled={disabled}
+            className={`px-3 py-2 rounded text-xs font-mono transition-all ${
+              currentPlay === play.id
+                ? 'bg-gold text-stadium'
+                : disabled
+                  ? 'bg-ink text-muted/40 cursor-not-allowed'
+                  : 'bg-ink text-cream hover:bg-ink/80 border border-gold/30 hover:border-gold'
+            }`}
+          >
+            {play.icon} {play.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AutoTimeoutPopup({ message, onUseTimeout, onLetRide, timeLeft }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className={`py-3 px-4 border-l-2 ${
-        isKey ? 'border-gold bg-gold/5' :
-        isClutch ? 'border-ember bg-ember/5' :
-        isInjury ? 'border-rust bg-rust/5' :
-        'border-muted/30'
-      }`}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70"
     >
-      <p className={`font-mono text-sm ${isKey ? 'text-gold' : 'text-cream/80'}`}>
-        {moment.description}
-      </p>
-      <span className="text-xs text-muted/60 font-mono">
-        {moment.timestamp ? new Date(moment.timestamp).toLocaleTimeString() : moment.created_at ? new Date(moment.created_at).toLocaleTimeString() : ''}
-      </span>
+      <motion.div
+        initial={{ y: 50 }}
+        animate={{ y: 0 }}
+        className="bg-ink border-2 border-ember rounded-xl p-8 max-w-md text-center shadow-2xl"
+      >
+        <motion.div
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 0.5, repeat: Infinity }}
+          className="text-5xl mb-4"
+        >
+          ⚠️
+        </motion.div>
+        <h3 className="font-display text-2xl text-ember mb-2">RUN DETECTED!</h3>
+        <p className="font-mono text-cream/80 mb-6">{message}</p>
+        
+        <div className="mb-4">
+          <div className="h-2 bg-stadium rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: '100%' }}
+              animate={{ width: `${(timeLeft / 5) * 100}%` }}
+              className="h-full bg-ember"
+            />
+          </div>
+          <p className="text-xs text-muted font-mono mt-1">{timeLeft}s</p>
+        </div>
+        
+        <div className="flex gap-3">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onUseTimeout}
+            className="flex-1 py-3 bg-gold text-stadium font-mono uppercase tracking-wider rounded-lg font-bold"
+          >
+            ⏸️ Use Timeout
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onLetRide}
+            className="flex-1 py-3 bg-stadium text-cream font-mono uppercase tracking-wider rounded-lg border border-muted/30"
+          >
+            🎲 Let it Ride
+          </motion.button>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
 
-function InterventionCard({ intervention, onSelect, selected }) {
+function QuarterScores({ quarterScores, currentQuarter }) {
   return (
-    <motion.button
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={() => onSelect(intervention.id)}
-      className={`p-4 rounded-lg border text-left transition-all ${
-        selected === intervention.id
-          ? 'border-rust bg-rust/10'
-          : 'border-ink bg-ink hover:border-rust/50'
-      }`}
-    >
-      <div className="flex items-center gap-3 mb-2">
-        <span className="text-2xl">{intervention.icon}</span>
-        <span className="font-display text-lg text-cream">{intervention.label}</span>
-      </div>
-      <p className="text-sm text-muted/80 font-mono">{intervention.description}</p>
-    </motion.button>
+    <div className="flex justify-center gap-4 mt-4">
+      {[1, 2, 3, 4].map(q => (
+        <div
+          key={q}
+          className={`text-center px-3 py-1 rounded ${
+            q === currentQuarter
+              ? 'bg-gold/20 border border-gold'
+              : q < currentQuarter
+                ? 'bg-stadium'
+                : 'bg-stadium/50'
+          }`}
+        >
+          <p className={`text-xs font-mono ${q <= currentQuarter ? 'text-muted' : 'text-muted/40'}`}>Q{q}</p>
+          <p className={`text-sm font-mono ${q <= currentQuarter ? 'text-cream' : 'text-muted/40'}`}>
+            {q <= currentQuarter ? `${quarterScores?.home[q-1] || 0} - ${quarterScores?.away[q-1] || 0}` : '-'}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
 
-function GameScoreboard({ game }) {
-  const homeScore = useCountUp(game?.home_score || 0, 1000);
-  const awayScore = useCountUp(game?.away_score || 0, 1000);
+function PlayByPlayFeed({ plays, keyMoments }) {
+  const allEvents = [
+    ...plays.map(p => ({ ...p, type: 'play', sortTime: p.possession })),
+    ...keyMoments.map(m => ({ ...m, type: 'moment', sortTime: m.quarter * 1000 })),
+  ].sort((a, b) => b.sortTime - a.sortTime);
 
   return (
-    <div className="flex items-center justify-center gap-12 py-8">
-      <div className="text-center">
-        <p className="font-display text-2xl text-cream mb-2">{game?.home_team?.city}</p>
-        <p className="font-mono text-5xl text-gold" key={homeScore}>
-          {homeScore}
-        </p>
-      </div>
-      <div className="text-center">
-        <p className="font-mono text-2xl text-muted">vs</p>
-      </div>
-      <div className="text-center">
-        <p className="font-display text-2xl text-cream mb-2">{game?.away_team?.city}</p>
-        <p className="font-mono text-5xl text-gold" key={awayScore}>
-          {awayScore}
-        </p>
-      </div>
+    <div className="space-y-1">
+      {allEvents.slice(0, 15).map((event, i) => {
+        if (event.type === 'moment') {
+          return (
+            <motion.div
+              key={`moment-${i}`}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`p-2 rounded border-l-2 ${
+                event.event_type === 'momentum_swing' ? 'bg-ember/10 border-ember' :
+                event.event_type === 'career_night' ? 'bg-gold/10 border-gold' :
+                event.event_type === 'clutch_moment' ? 'bg-ember/10 border-ember' :
+                event.event_type === 'injury_scare' ? 'bg-rust/10 border-rust' :
+                'bg-stadium border-muted'
+              }`}
+            >
+              <p className={`text-xs font-mono ${
+                event.event_type === 'momentum_swing' ? 'text-ember' :
+                event.event_type === 'career_night' ? 'text-gold' :
+                event.event_type === 'clutch_moment' ? 'text-ember' :
+                event.event_type === 'injury_scare' ? 'text-rust' :
+                'text-muted'
+              }`}>
+                {event.description}
+              </p>
+            </motion.div>
+          );
+        }
+        
+        const playEmoji = {
+          dunk: '💪',
+          jump_shot: '🏀',
+          three_pointer: '🎯',
+          turnover: '❌',
+          missed_shot: '🤷',
+          blocked_shot: '🛑',
+        }[event.playType] || '🏀';
+        
+        return (
+          <motion.div
+            key={`play-${i}`}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-2 py-1 px-2 text-xs font-mono"
+          >
+            <span className="text-muted/60 w-16">{event.time}</span>
+            <span>{playEmoji}</span>
+            <span className="text-cream/80 flex-1">
+              {event.player} - {event.playType.replace('_', ' ')}
+            </span>
+            <span className="text-muted">
+              {event.homeScore}-{event.awayScore}
+            </span>
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
 
 export default function GameDay() {
   const navigate = useNavigate();
-  const { gameState, activeTeam, activeSeason, addGameFeedItem, updateGameState } = useGame();
-  const [liveGame, setLiveGame] = useState(null);
-  const [moments, setMoments] = useState([]);
-  const [selectedIntervention, setSelectedIntervention] = useState(null);
-  const [isSimulating, setIsSimulating] = useState(false);
-
+  const { gameState, activeTeam, activeSeason, addGameFeedItem, updateGameState, gmProfile } = useGame();
   const { data: roster } = useRoster(activeTeam?.id || null);
-
-  const typewriterState = useTypewriter(
-    moments.length > 0
-      ? moments[moments.length - 1].description
-      : 'Waiting for game to start...',
-    30
-  );
+  const { data: coaches } = useCoachingStaff(activeTeam?.id || null);
+  
+  const [liveGame, setLiveGame] = useState(null);
+  const [gameSpeed, setGameSpeed] = useState('standard');
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [gameResult, setGameResult] = useState(null);
+  const [currentPlay, setCurrentPlay] = useState(null);
+  const [gameProgress, setGameProgress] = useState(0);
+  const [currentQuarter, setCurrentQuarter] = useState(1);
+  const [momentum, setMomentum] = useState(0);
+  const [timeoutsLeft, setTimeoutsLeft] = useState(6);
+  const [showAutoTimeout, setShowAutoTimeout] = useState(false);
+  const [autoTimeoutMessage, setAutoTimeoutMessage] = useState('');
+  const [autoTimeoutTimeLeft, setAutoTimeoutTimeLeft] = useState(5);
+  const [runPoints, setRunPoints] = useState(0);
+  
+  const timeoutRef = useRef(null);
+  const autoTimeoutIntervalRef = useRef(null);
+  
+  const gmStyle = gmProfile?.rep_archetype || 'rebuilder';
+  const isHome = activeTeam?.id === liveGame?.home_team?.id;
+  
+  const mainCoach = coaches?.find(c => c.specialty);
+  const coachSpecialty = mainCoach?.specialty || null;
 
   useEffect(() => {
     if (!activeTeam?.id || !activeSeason?.id) return;
@@ -164,7 +344,8 @@ export default function GameDay() {
   }, [activeTeam?.id, activeSeason?.id]);
 
   useEffect(() => {
-    if (!activeTeam?.id || !activeSeason?.id || liveGame !== null) return
+    if (!activeTeam?.id || !activeSeason?.id || liveGame !== null) return;
+    
     const ensureGame = async () => {
       const { data: pending } = await supabase
         .from('game_log')
@@ -172,22 +353,22 @@ export default function GameDay() {
         .or(`home_team_id.eq.${activeTeam.id},away_team_id.eq.${activeTeam.id}`)
         .eq('season_id', activeSeason.id)
         .is('home_score', null)
-        .limit(1)
-      if (pending && pending.length > 0) return
+        .limit(1);
+      if (pending && pending.length > 0) return;
 
       const { data: opponents } = await supabase
         .from('teams')
         .select('id, name, city, color_primary')
         .neq('id', activeTeam.id)
-        .limit(30)
-      if (!opponents || opponents.length === 0) return
+        .limit(30);
+      if (!opponents || opponents.length === 0) return;
 
-      const opponent = opponents[Math.floor(Math.random() * opponents.length)]
+      const opponent = opponents[Math.floor(Math.random() * opponents.length)];
       const { data: homeData } = await supabase
         .from('teams')
         .select('id, name, city, color_primary')
         .eq('id', activeTeam.id)
-        .single()
+        .single();
 
       if (homeData) {
         setLiveGame({
@@ -198,11 +379,32 @@ export default function GameDay() {
           away_score: 0,
           status: 'scheduled',
           isAdHoc: true,
-        })
+        });
       }
+    };
+    ensureGame();
+  }, [activeTeam?.id, activeSeason?.id, liveGame]);
+
+  const handlePlayCall = useCallback((play) => {
+    setCurrentPlay(play);
+  }, []);
+
+  const handleUseTimeout = useCallback(() => {
+    setTimeoutsLeft(prev => Math.max(0, prev - 1));
+    setMomentum(0);
+    setRunPoints(0);
+    setShowAutoTimeout(false);
+    if (autoTimeoutIntervalRef.current) {
+      clearInterval(autoTimeoutIntervalRef.current);
     }
-    ensureGame()
-  }, [activeTeam?.id, activeSeason?.id, liveGame])
+  }, []);
+
+  const handleLetRide = useCallback(() => {
+    setShowAutoTimeout(false);
+    if (autoTimeoutIntervalRef.current) {
+      clearInterval(autoTimeoutIntervalRef.current);
+    }
+  }, []);
 
   const handlePlayGame = useCallback(async () => {
     if (!liveGame || !activeTeam || !activeSeason || isSimulating) return;
@@ -210,10 +412,16 @@ export default function GameDay() {
       alert('Roster not loaded yet. Please wait a moment and try again.');
       return;
     }
+    
     setIsSimulating(true);
-    setMoments([]);
-    setLiveGame(prev => ({ ...prev, status: 'live' }));
-
+    setGameResult(null);
+    setCurrentPlay(null);
+    setMomentum(0);
+    setTimeoutsLeft(6);
+    setRunPoints(0);
+    setCurrentQuarter(1);
+    setGameProgress(0);
+    
     try {
       const isHome = liveGame.home_team.id === activeTeam.id;
       const opponentId = isHome ? liveGame.away_team.id : liveGame.home_team.id;
@@ -234,11 +442,78 @@ export default function GameDay() {
 
       const homeTeam = buildTeamObj(liveGame.home_team, roster);
       const awayTeam = buildTeamObj(liveGame.away_team, opponentRoster || []);
+      
+      if (coaches && coaches.length > 0) {
+        homeTeam.coaches = coaches;
+      }
 
-      const result = simGame(homeTeam, awayTeam);
+      const result = simPossessions(homeTeam, awayTeam, {
+        speed: gameSpeed,
+        homeCoachSpecialty: coachSpecialty,
+        gmStyle,
+      });
+
       const won = isHome ? result.homeScore > result.awayScore : result.awayScore > result.homeScore;
+      
+      const liveMoments = [];
+      let currentRunPoints = 0;
+      let runDirection = 0;
+      
+      for (let i = 0; i < result.playByPlay.length; i++) {
+        const play = result.playByPlay[i];
+        setGameProgress((i + 1) / result.playByPlay.length);
+        setCurrentQuarter(Math.ceil((i + 1) / (result.playByPlay.length / 4)));
+        
+        setMomentum(play.momentum);
+        
+        if (play.points > 0) {
+          if (play.team === (isHome ? liveGame.home_team.name : liveGame.away_team.name)) {
+            currentRunPoints += play.points;
+            runDirection = 1;
+          } else {
+            currentRunPoints = play.points;
+            runDirection = -1;
+          }
+        }
+        
+        setRunPoints(currentRunPoints * runDirection);
+        
+        if (Math.abs(currentRunPoints) >= 6 && !showAutoTimeout) {
+          const check = checkAutoTimeoutNeeded({ 
+            momentum: play.momentum, 
+            opponentRunPoints: Math.abs(currentRunPoints) 
+          });
+          if (check.needed && check.direction === 'against') {
+            setAutoTimeoutMessage(check.message);
+            setAutoTimeoutTimeLeft(5);
+            setShowAutoTimeout(true);
+            
+            autoTimeoutIntervalRef.current = setInterval(() => {
+              setAutoTimeoutTimeLeft(prev => {
+                if (prev <= 1) {
+                  handleLetRide();
+                  return 5;
+                }
+                return prev - 1;
+              });
+            }, 1000);
+          }
+        }
+        
+        if (GAME_SPEEDS[gameSpeed].delay > 100) {
+          await new Promise(resolve => setTimeout(resolve, GAME_SPEEDS[gameSpeed].delay));
+        }
+      }
 
-      const keyMoments = generateKeyMoments(homeTeam, awayTeam, result.homeScore, result.awayScore);
+      setGameResult({
+        homeScore: result.homeScore,
+        awayScore: result.awayScore,
+        won,
+        quarterScores: result.quarterScores,
+        moments: result.moments,
+        plays: result.playByPlay,
+        opponentBonus: result.opponentBonus,
+      });
 
       setLiveGame(prev => ({
         ...prev,
@@ -246,7 +521,6 @@ export default function GameDay() {
         away_score: result.awayScore,
         status: 'completed',
       }));
-      setMoments(keyMoments.map(m => ({ ...m, timestamp: new Date().toISOString() })));
 
       if (!liveGame.isAdHoc) {
         const { error: updateError } = await supabase
@@ -254,18 +528,6 @@ export default function GameDay() {
           .update({ home_score: result.homeScore, away_score: result.awayScore })
           .eq('id', liveGame.id);
         if (updateError) throw updateError;
-
-        for (const moment of keyMoments) {
-          await supabase.from('play_by_play').insert({
-            game_log_id: liveGame.id,
-            event_type: moment.event_type,
-            description: moment.description,
-            player_id: moment.player_id || null,
-            is_key_moment: moment.is_key_moment || false,
-            home_score_after: result.homeScore,
-            away_score_after: result.awayScore,
-          });
-        }
 
         const winnerId = result.homeScore > result.awayScore ? liveGame.home_team.id : liveGame.away_team.id;
         const loserId = winnerId === liveGame.home_team.id ? liveGame.away_team.id : liveGame.home_team.id;
@@ -291,15 +553,15 @@ export default function GameDay() {
       setLiveGame(prev => ({ ...prev, status: 'scheduled' }));
     } finally {
       setIsSimulating(false);
+      setShowAutoTimeout(false);
+      if (autoTimeoutIntervalRef.current) {
+        clearInterval(autoTimeoutIntervalRef.current);
+      }
     }
-  }, [liveGame, activeTeam, activeSeason, isSimulating, roster, addGameFeedItem, updateGameState, gameState.teamRecord]);
+  }, [liveGame, activeTeam, activeSeason, isSimulating, roster, coaches, gameSpeed, coachSpecialty, gmStyle, addGameFeedItem, updateGameState, gameState.teamRecord, showAutoTimeout, handleLetRide]);
 
-  const handleIntervention = (type) => {
-    setSelectedIntervention(type);
-    if (liveGame) {
-      applyGMIntervention(type, {}, {});
-    }
-  };
+  const homeScore = useCountUp(gameResult?.homeScore || liveGame?.home_score || 0, 1000);
+  const awayScore = useCountUp(gameResult?.awayScore || liveGame?.away_score || 0, 1000);
 
   return (
     <motion.div
@@ -309,6 +571,17 @@ export default function GameDay() {
       transition={{ duration: 0.25 }}
       className="space-y-6"
     >
+      <AnimatePresence>
+        {showAutoTimeout && (
+          <AutoTimeoutPopup
+            message={autoTimeoutMessage}
+            onUseTimeout={handleUseTimeout}
+            onLetRide={handleLetRide}
+            timeLeft={autoTimeoutTimeLeft}
+          />
+        )}
+      </AnimatePresence>
+
       {!activeTeam ? (
         <>
           <PageHeader title="Game Day" subtitle="No team selected" />
@@ -335,59 +608,108 @@ export default function GameDay() {
             }
           />
 
+          <div className="flex items-center justify-between">
+            <SpeedSelector selected={gameSpeed} onSelect={setGameSpeed} />
+            {isSimulating && (
+              <div className="flex items-center gap-3">
+                <div className="w-32 h-2 bg-stadium rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${gameProgress * 100}%` }}
+                    className="h-full bg-gold"
+                  />
+                </div>
+                <span className="text-xs font-mono text-muted">
+                  {Math.round(gameProgress * 100)}%
+                </span>
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 space-y-6">
               <div className="bg-ink rounded-lg border border-stadium overflow-hidden">
                 <div className="bg-stadium px-6 py-4 border-b border-muted/20">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <span className={`px-3 py-1 text-sm font-mono rounded ${
-                        liveGame?.status === 'live' ? 'bg-ember/20 text-ember' :
-                        liveGame?.status === 'completed' ? 'bg-gold/20 text-gold' :
-                        'bg-muted/20 text-muted'
-                      }`}>
-                        {liveGame?.status === 'live' ? 'LIVE' :
-                         liveGame?.status === 'completed' ? 'FINAL' :
-                         liveGame?.status === 'scheduled' ? 'SCHEDULED' :
-                         'NO GAME'}
-                      </span>
-                      <span className="font-mono text-cream/80">
-                        {liveGame?.status === 'completed' ? 'FINAL' : 'PRE-GAME'}
-                      </span>
-                    </div>
+                    <span className={`px-3 py-1 text-sm font-mono rounded ${
+                      liveGame?.status === 'live' ? 'bg-ember/20 text-ember' :
+                      liveGame?.status === 'completed' ? 'bg-gold/20 text-gold' :
+                      'bg-muted/20 text-muted'
+                    }`}>
+                      {liveGame?.status === 'completed' ? 'FINAL' : 
+                       liveGame?.status === 'live' ? 'LIVE' : 
+                       'SCHEDULED'}
+                    </span>
+                    <span className="text-xs font-mono text-muted">
+                      {liveGame?.home_team?.city} vs {liveGame?.away_team?.city}
+                    </span>
                   </div>
                 </div>
 
-                <GameScoreboard game={liveGame} />
-
-                <AnimatePresence mode="wait">
-                  {moments.length > 0 && (
-                    <motion.div
-                      key="latest"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      className="px-6 py-4 bg-gold/5 border-t border-gold/20"
-                    >
-                      <p className="font-serif text-lg text-cream italic">
-                        "{typewriterState.displayed}"
+                <div className="px-6 py-4">
+                  <div className="flex items-center justify-center gap-8">
+                    <div className="text-center flex-1">
+                      <p className="font-display text-lg text-cream mb-1">
+                        {isHome ? liveGame?.home_team?.city : liveGame?.away_team?.city}
                       </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      <p className="font-mono text-5xl text-gold" key={homeScore}>
+                        {homeScore}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-mono text-2xl text-muted">vs</p>
+                    </div>
+                    <div className="text-center flex-1">
+                      <p className="font-display text-lg text-cream mb-1">
+                        {isHome ? liveGame?.away_team?.city : liveGame?.home_team?.city}
+                      </p>
+                      <p className="font-mono text-5xl text-gold" key={awayScore}>
+                        {awayScore}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <QuarterScores 
+                    quarterScores={gameResult?.quarterScores} 
+                    currentQuarter={currentQuarter}
+                  />
+                </div>
               </div>
 
-              <div className="bg-ink rounded-lg border border-stadium p-6">
-                <h3 className="font-display text-lg text-cream mb-4">GM Interventions</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {INTERVENTION_TYPES.map(intervention => (
-                    <InterventionCard
-                      key={intervention.id}
-                      intervention={intervention}
-                      selected={selectedIntervention}
-                      onSelect={handleIntervention}
-                    />
-                  ))}
+              <MomentumMeter momentum={momentum} />
+
+              <PlaybookPanel 
+                coachSpecialty={coachSpecialty}
+                onPlayCall={handlePlayCall}
+                currentPlay={currentPlay?.id}
+                disabled={isSimulating || liveGame?.status === 'completed'}
+              />
+
+              <div className="bg-ink rounded-lg border border-stadium p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-mono text-sm text-cream">GM Actions</h3>
+                  <span className="text-xs font-mono text-muted">
+                    Timeouts: {timeoutsLeft}/6
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (timeoutsLeft > 0) {
+                        handleUseTimeout();
+                      }
+                    }}
+                    disabled={timeoutsLeft === 0 || isSimulating || liveGame?.status === 'completed'}
+                    className="flex-1 py-2 px-3 bg-stadium text-cream rounded font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-ink"
+                  >
+                    ⏸️ Timeout ({timeoutsLeft})
+                  </button>
+                  <button
+                    disabled={isSimulating || liveGame?.status === 'completed'}
+                    className="flex-1 py-2 px-3 bg-stadium text-cream rounded font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-ink"
+                  >
+                    ↻ Substitution
+                  </button>
                 </div>
               </div>
             </div>
@@ -395,18 +717,15 @@ export default function GameDay() {
             <div className="space-y-6">
               <div className="bg-ink rounded-lg border border-stadium overflow-hidden">
                 <div className="bg-stadium px-4 py-3 border-b border-muted/20">
-                  <h3 className="font-mono text-sm text-cream">Play-by-Play</h3>
+                  <h3 className="font-mono text-sm text-cream">
+                    {isSimulating ? 'Live ' : ''}Play-by-Play
+                  </h3>
                 </div>
-                <div className="max-h-[500px] overflow-y-auto divide-y divide-muted/10">
-                  {moments.length === 0 ? (
-                    <p className="p-4 text-sm text-muted/60 font-mono text-center">
-                      No plays yet
-                    </p>
-                  ) : (
-                    moments.map((moment, i) => (
-                      <PlayByPlayItem key={i} moment={moment} index={i} />
-                    ))
-                  )}
+                <div className="max-h-[500px] overflow-y-auto p-4">
+                  <PlayByPlayFeed 
+                    plays={gameResult?.plays || []} 
+                    keyMoments={gameResult?.moments || []}
+                  />
                 </div>
               </div>
 
