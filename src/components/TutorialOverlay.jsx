@@ -1,274 +1,193 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 const TUTORIAL_STEPS = [
   {
     id: 0,
     title: 'Welcome, GM!',
-    message: 'Welcome to Bashketbal! Let me show you around. Click "Next" to learn about your Priority Inbox.',
+    message: 'Welcome to Bashketbal! Let me show you around. This is your Priority Inbox - all important news, trades, and updates appear here.',
+    targetPage: '/dashboard',
     targetSelector: '[data-tutorial="inbox"]',
-    position: 'right',
   },
   {
     id: 1,
     title: 'Your Roster',
-    message: 'Here\'s your team roster. OVR shows player overall rating. Potential indicates future growth ceiling. Click "Next" to head to your roster.',
+    message: 'Here\'s your team roster. OVR shows player overall rating. Potential indicates future growth ceiling. Click any player to see their details!',
+    targetPage: '/roster',
     targetSelector: '[data-tutorial="player-row"]',
-    position: 'right',
-    navigateTo: '/roster',
   },
   {
     id: 2,
     title: 'Play Games',
-    message: 'When ready, head to Game Day to play. Choose your speed, make decisions, and win games! Click "Next" to go to Game Day.',
+    message: 'When ready, head to Game Day to play. Choose your speed (Quick/Standard/Detailed), make decisions during games, and win!',
+    targetPage: '/game-day',
     targetSelector: '[data-tutorial="play-button"]',
-    position: 'right',
-    navigateTo: '/game-day',
   },
   {
     id: 3,
     title: 'Trade Market',
-    message: 'Improve your team through trades. Swap players and draft picks to build a championship roster. Click "Next" to visit the Trade Market.',
+    message: 'Improve your team through trades. Swap players and draft picks to build a championship roster.',
+    targetPage: '/trade-market',
     targetSelector: '[data-tutorial="new-trade"]',
-    position: 'right',
-    navigateTo: '/trade-market',
   },
   {
     id: 4,
     title: 'Scouting',
-    message: 'Scout draft prospects to learn about future stars. Assign scouts to reveal their skills! You\'re ready to build your dynasty!',
+    message: 'Scout draft prospects to learn about future stars. Assign scouts to reveal their skills!',
+    targetPage: '/scouting',
     targetSelector: '[data-tutorial="scouts"]',
-    position: 'left',
-    navigateTo: '/scouting',
   },
 ]
 
 export default function TutorialOverlay({ tutorialState, onComplete, onSkip }) {
   const navigate = useNavigate()
-  const [currentStep, setCurrentStep] = useState(0)
+  const location = useLocation()
   const [targetRect, setTargetRect] = useState(null)
-  const [showCelebration, setShowCelebration] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
+  const [showCard, setShowCard] = useState(false)
 
   const tutorialCompleted = tutorialState?.completed || false
   const tutorialSkipped = tutorialState?.skipped || false
   const actualStep = tutorialState?.currentStep ?? 0
 
+  const step = TUTORIAL_STEPS[actualStep]
+  const needsNavigation = step && location.pathname !== step.targetPage
+
   useEffect(() => {
     if (tutorialCompleted || tutorialSkipped) {
-      setShowCelebration(false)
+      setShowCard(false)
       return
     }
 
-    if (actualStep >= TUTORIAL_STEPS.length) {
-      setShowCelebration(true)
+    if (!step) {
+      setShowCard(false)
       return
     }
 
-    setCurrentStep(actualStep)
-    
-    const timer = setTimeout(() => {
-      updateTargetPosition()
-    }, 300)
-    
-    return () => clearTimeout(timer)
-  }, [actualStep, tutorialCompleted, tutorialSkipped])
-  
-  useEffect(() => {
-    const handleResize = () => {
-      updateTargetPosition()
+    if (needsNavigation && !isNavigating) {
+      setShowCard(false)
+      setIsNavigating(true)
+      navigate(step.targetPage)
+      return
     }
-    const handleScroll = () => {
-      updateTargetPosition()
-    }
-    window.addEventListener('resize', handleResize)
-    window.addEventListener('scroll', handleScroll)
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      window.removeEventListener('scroll', handleScroll)
-    }
-  }, [currentStep])
 
-  const updateTargetPosition = () => {
-    const step = TUTORIAL_STEPS[currentStep]
-    if (!step) return
-
-    const element = document.querySelector(step.targetSelector)
-    if (element) {
-      const rect = element.getBoundingClientRect()
-      setTargetRect(rect)
+    if (!needsNavigation && isNavigating) {
+      setIsNavigating(false)
     }
-  }
 
-  const handleNext = useCallback(() => {
-    if (currentStep === TUTORIAL_STEPS.length - 1) {
-      setShowCelebration(true)
-      onComplete?.()
-    } else {
-      const currentStepData = TUTORIAL_STEPS[currentStep]
-      if (currentStepData?.navigateTo) {
-        navigate(currentStepData.navigateTo)
-        setTimeout(() => {
-          onComplete?.()
-        }, 800)
+    const updateTargetPosition = () => {
+      if (!step?.targetSelector) {
+        setTargetRect(null)
+        setShowCard(true)
+        return
+      }
+
+      const element = document.querySelector(step.targetSelector)
+      if (element) {
+        const rect = element.getBoundingClientRect()
+        setTargetRect(rect)
+        setShowCard(true)
       } else {
-        onComplete?.()
+        setTargetRect(null)
+        const timer = setTimeout(updateTargetPosition, 100)
+        return () => clearTimeout(timer)
       }
     }
-  }, [currentStep, navigate, onComplete])
 
-  const handleFinishTutorial = useCallback(() => {
-    onComplete?.()
-  }, [onComplete])
+    const timer = setTimeout(updateTargetPosition, 300)
+    return () => clearTimeout(timer)
+  }, [actualStep, tutorialCompleted, tutorialSkipped, needsNavigation, isNavigating, step, location.pathname, navigate])
+
+  const handleNext = useCallback(() => {
+    if (actualStep === TUTORIAL_STEPS.length - 1) {
+      onComplete?.()
+    } else {
+      onComplete?.()
+    }
+  }, [actualStep, onComplete])
 
   const handleSkip = useCallback(() => {
     onSkip?.()
   }, [onSkip])
 
-  if (tutorialCompleted || tutorialSkipped) return null
+  if (tutorialCompleted || tutorialSkipped || isNavigating) return null
 
-  if (showCelebration) {
+  if (!step || !showCard) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6"
+        className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center"
       >
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', damping: 15 }}
-          className="bg-ink border-2 border-gold rounded-2xl p-10 max-w-lg text-center"
-        >
+        <div className="bg-ink border-2 border-gold rounded-xl p-8 text-center">
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3, type: 'spring', damping: 10 }}
-            className="text-8xl mb-6"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            className="text-4xl mb-4"
           >
-            🏆
+            🎓
           </motion.div>
-          
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="font-display text-4xl text-gold mb-4"
-          >
-            You're Ready, GM!
-          </motion.h2>
-          
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="font-mono text-cream/80 mb-8"
-          >
-            You've completed the tutorial! Your journey to build a dynasty begins now.
-            Good luck, and remember - every championship starts with a single decision!
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.9 }}
-            className="flex flex-col gap-3"
-          >
-            <button
-              onClick={handleFinishTutorial}
-              className="w-full py-4 bg-gold text-stadium font-mono text-lg uppercase tracking-wider rounded-lg hover:bg-gold/90 transition-colors font-bold"
-            >
-              Start Your Dynasty! 🏀
-            </button>
-            <p className="text-xs text-muted font-mono">
-              You can always replay the tutorial from the dashboard.
-            </p>
-          </motion.div>
-        </motion.div>
+          <p className="font-mono text-cream">Loading tutorial...</p>
+        </div>
       </motion.div>
     )
   }
 
-  const step = TUTORIAL_STEPS[currentStep]
-  if (!step || !targetRect) return null
-
-  const isLeft = step.position === 'left'
+  const isLeft = step.id === 4
   const cardWidth = 380
-  const cardHeight = 320
+  const cardHeight = 280
 
-  let cardLeft, cardTop
-  if (isLeft) {
-    cardLeft = targetRect.left - cardWidth - 30
-    if (cardLeft < 20) cardLeft = targetRect.right + 30
-  } else {
-    cardLeft = targetRect.right + 30
-    if (cardLeft + cardWidth > window.innerWidth - 20) {
-      cardLeft = targetRect.left - cardWidth - 30
-    }
-  }
-
-  cardTop = Math.max(20, Math.min(
-    targetRect.top + targetRect.height / 2 - cardHeight / 2,
-    window.innerHeight - cardHeight - 20
+  let cardLeft = isLeft ? 40 : window.innerWidth - cardWidth - 40
+  let cardTop = Math.max(100, Math.min(
+    (targetRect?.top || window.innerHeight / 2) + (targetRect?.height || 0) / 2 - cardHeight / 2,
+    window.innerHeight - cardHeight - 100
   ))
 
   return (
     <>
-      {/* Subtle spotlight on target */}
+      {/* Subtle overlay */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="fixed z-40 pointer-events-none"
-        style={{
-          left: targetRect.left - 12,
-          top: targetRect.top - 12,
-          width: targetRect.width + 24,
-          height: targetRect.height + 24,
-        }}
-      >
-        <motion.div
-          animate={{ 
-            boxShadow: [
-              '0 0 20px 5px rgba(200, 150, 58, 0.3)',
-              '0 0 30px 10px rgba(200, 150, 58, 0.5)',
-              '0 0 20px 5px rgba(200, 150, 58, 0.3)',
-            ],
-          }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="w-full h-full border-2 border-gold rounded-lg"
-        />
-      </motion.div>
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/40 z-[100] pointer-events-none"
+      />
 
-      {/* Connector line */}
-      <svg className="fixed inset-0 z-40 pointer-events-none" style={{ overflow: 'visible' }}>
-        <motion.line
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          x1={isLeft ? cardLeft + cardWidth : cardLeft}
-          y1={cardTop + 80}
-          x2={targetRect.left - 20}
-          y2={targetRect.top + targetRect.height / 2}
-          stroke="#C8963A"
-          strokeWidth="2"
-          strokeDasharray="5,5"
-        />
-        <circle
-          cx={targetRect.left - 20}
-          cy={targetRect.top + targetRect.height / 2}
-          r="6"
-          fill="#C8963A"
-        />
-      </svg>
+      {/* Spotlight on target */}
+      {targetRect && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed z-[101] pointer-events-none"
+          style={{
+            left: targetRect.left - 8,
+            top: targetRect.top - 8,
+            width: targetRect.width + 16,
+            height: targetRect.height + 16,
+          }}
+        >
+          <motion.div
+            animate={{ 
+              boxShadow: [
+                '0 0 20px 5px rgba(200, 150, 58, 0.4)',
+                '0 0 35px 10px rgba(200, 150, 58, 0.6)',
+                '0 0 20px 5px rgba(200, 150, 58, 0.4)',
+              ],
+            }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="w-full h-full border-2 border-gold rounded-lg"
+          />
+        </motion.div>
+      )}
 
       {/* Tutorial card */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, x: isLeft ? -20 : 20 }}
-        animate={{ opacity: 1, scale: 1, x: 0 }}
+        initial={{ opacity: 0, y: 30, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        transition={{ type: 'spring', damping: 20 }}
-        className="fixed z-[60] w-[380px]"
+        className="fixed z-[110] w-[380px]"
         style={{
           left: cardLeft,
           top: cardTop,
@@ -291,7 +210,7 @@ export default function TutorialOverlay({ tutorialState, onComplete, onSkip }) {
                 </span>
               </div>
               <span className="text-xs text-muted font-mono">
-                {currentStep + 1} / {TUTORIAL_STEPS.length}
+                {actualStep + 1} / {TUTORIAL_STEPS.length}
               </span>
             </div>
           </div>
@@ -312,8 +231,8 @@ export default function TutorialOverlay({ tutorialState, onComplete, onSkip }) {
                   key={i}
                   initial={false}
                   animate={{
-                    width: i === currentStep ? 24 : 8,
-                    backgroundColor: i <= currentStep ? '#C8963A' : '#4A4540',
+                    width: i === actualStep ? 24 : 8,
+                    backgroundColor: i <= actualStep ? '#C8963A' : '#4A4540',
                   }}
                   transition={{ duration: 0.3 }}
                   className="h-2 rounded-full"
@@ -335,27 +254,57 @@ export default function TutorialOverlay({ tutorialState, onComplete, onSkip }) {
                 whileTap={{ scale: 0.98 }}
                 className="flex-1 py-2.5 bg-gold text-stadium font-mono text-sm uppercase tracking-wider rounded-lg hover:bg-gold/90 transition-colors font-bold"
               >
-                {currentStep === TUTORIAL_STEPS.length - 1 ? 'Finish 🎉' : 'Next →'}
+                {actualStep === TUTORIAL_STEPS.length - 1 ? 'Finish 🎉' : 'Next →'}
               </motion.button>
             </div>
           </div>
         </div>
 
         {/* Arrow pointing to target */}
+        {targetRect && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, y: [0, 5, 0] }}
+            transition={{ delay: 0.5, duration: 1, repeat: Infinity }}
+            className="absolute text-gold text-2xl"
+            style={{
+              left: isLeft ? '100%' : 'auto',
+              right: isLeft ? 'auto' : '100%',
+              top: '50%',
+              transform: `translateY(-50%) ${isLeft ? 'rotate(0deg)' : 'rotate(180deg)'}`,
+            }}
+          >
+            ◀
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* Celebration overlay */}
+      {actualStep >= TUTORIAL_STEPS.length && (
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1, x: [0, 5, 0] }}
-          transition={{ delay: 0.5, duration: 1, repeat: Infinity }}
-          className="absolute top-1/2 -translate-y-1/2 text-gold text-2xl"
-          style={{ 
-            left: isLeft ? '100%' : 'auto', 
-            right: isLeft ? 'auto' : '100%',
-            transform: 'translateY(-50%) rotate(180deg)'
-          }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center"
         >
-          ◀
+          <motion.div
+            initial={{ scale: 0.5 }}
+            animate={{ scale: 1 }}
+            className="bg-ink border-2 border-gold rounded-2xl p-10 text-center"
+          >
+            <div className="text-8xl mb-6">🏆</div>
+            <h2 className="font-display text-4xl text-gold mb-4">You're Ready, GM!</h2>
+            <p className="font-mono text-cream/80 mb-6">
+              Your journey to build a dynasty begins now!
+            </p>
+            <button
+              onClick={handleNext}
+              className="w-full py-4 bg-gold text-stadium font-mono text-lg uppercase rounded-lg font-bold"
+            >
+              Start Your Dynasty! 🏀
+            </button>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
     </>
   )
 }

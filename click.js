@@ -1,1 +1,0 @@
-document.querySelectorAll("button")[2].click()
