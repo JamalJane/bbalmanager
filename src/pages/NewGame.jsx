@@ -193,16 +193,16 @@ export default function NewGame() {
         is_active: true,
       }
 
-      localStorage.setItem('hardwood_gm', JSON.stringify(gmData))
-      localStorage.setItem('hardwood_season', JSON.stringify(seasonData))
-      localStorage.setItem('hardwood_team', JSON.stringify(selectedTeamData))
+      localStorage.setItem('bashketbal_gm', JSON.stringify(gmData))
+      localStorage.setItem('bashketbal_season', JSON.stringify(seasonData))
+      localStorage.setItem('bashketbal_team', JSON.stringify(selectedTeamData))
 
       setGmProfile(gmData)
       setActiveTeam(selectedTeamData)
       setActiveSeason(seasonData)
       startTutorial()
 
-      navigate('/')
+      navigate('/dashboard')
     } catch (err) {
       console.error('Error creating game:', err)
       setError(err.message || 'Failed to create game. Please try again.')
